@@ -6,6 +6,8 @@ import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
+import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import PatientSearch from './pages/PatientSearch';
 import PatientChart from './pages/PatientChart';
@@ -33,7 +35,9 @@ const App: React.FC = () => {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route
               element={
                 <ProtectedRoute>

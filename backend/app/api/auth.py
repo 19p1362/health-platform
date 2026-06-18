@@ -59,10 +59,10 @@ async def login(request: LoginRequest, req: Request, db: AsyncSession = Depends(
 
     access_expires = timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "user_id": user.id, "role": user.role.value},
+        data={"sub": user.email, "user_id": user.id, "role": user.role.value, "tenant_id": user.tenant_id},
         expires_delta=access_expires
     )
-    refresh_token = create_refresh_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email, "tenant_id": user.tenant_id})
 
     await log_action(
         action=AuditAction.LOGIN_SUCCESS,
@@ -82,6 +82,7 @@ async def login(request: LoginRequest, req: Request, db: AsyncSession = Depends(
             "email": user.email,
             "full_name": user.full_name,
             "role": user.role.value,
+            "tenant_id": user.tenant_id,
         }
     )
 
@@ -100,10 +101,10 @@ async def refresh(request: RefreshRequest, req: Request, db: AsyncSession = Depe
 
     access_expires = timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     new_access = create_access_token(
-        data={"sub": user.email, "user_id": user.id, "role": user.role.value},
+        data={"sub": user.email, "user_id": user.id, "role": user.role.value, "tenant_id": user.tenant_id},
         expires_delta=access_expires
     )
-    new_refresh = create_refresh_token(data={"sub": user.email})
+    new_refresh = create_refresh_token(data={"sub": user.email, "tenant_id": user.tenant_id})
 
     return TokenResponse(
         access_token=new_access,
@@ -176,6 +177,7 @@ async def get_me(current_user: User = Depends(get_current_active_user)):
         "email": current_user.email,
         "full_name": current_user.full_name,
         "role": current_user.role.value,
+        "tenant_id": current_user.tenant_id,
         "is_active": current_user.is_active,
         "last_login": current_user.last_login.isoformat() if current_user.last_login else None,
     }

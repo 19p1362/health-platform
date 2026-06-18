@@ -112,6 +112,11 @@ const Login: React.FC = () => {
             <span>Data Protection Compliant</span>
           </div>
         </div>
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>New to HealthBridge? </span>
+          <a href="/signup" style={{ fontSize: 13, color: '#14b8a6', textDecoration: 'none', fontWeight: 600 }}>Create an organization</a>
+        </div>
       </div>
     </div>
   );

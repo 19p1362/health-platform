@@ -10,10 +10,14 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 3001,
     proxy: {
       '/api': 'http://localhost:8080',
       '/fhir': 'http://localhost:8080',
+      '/docs': 'http://localhost:8080',
+      '/redoc': 'http://localhost:8080',
+      '/openapi.json': 'http://localhost:8080',
+      '/health': 'http://localhost:8080',
     },
   },
   build: {

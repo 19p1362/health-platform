@@ -87,11 +87,18 @@ class BreachStatus(str, PyEnum):
     REPORTED_TO_BOARD = "REPORTED_TO_BOARD"
 
 class UserRole(str, PyEnum):
-    ADMIN = "ADMIN"
+    SUPER_ADMIN = "SUPER_ADMIN"       # Platform-wide admin
+    ORG_ADMIN = "ORG_ADMIN"           # Clinic/hospital admin
     DOCTOR = "DOCTOR"
     NURSE = "NURSE"
     COORDINATOR = "COORDINATOR"
     READ_ONLY = "READ_ONLY"
+
+class SubscriptionTier(str, PyEnum):
+    FREE = "FREE"
+    STARTER = "STARTER"
+    PROFESSIONAL = "PROFESSIONAL"
+    ENTERPRISE = "ENTERPRISE"
 
 class ConsentPurpose(str, PyEnum):
     TREATMENT = "TREATMENT"
@@ -99,6 +106,37 @@ class ConsentPurpose(str, PyEnum):
     OPERATIONS = "OPERATIONS"
     RESEARCH = "RESEARCH"
     PUBLIC_HEALTH = "PUBLIC_HEALTH"
+
+# ═══════════════════════════════════════════════════
+# Organization (Tenant)
+# ═══════════════════════════════════════════════════
+
+class Organization(Base):
+    """A healthcare organization (clinic, hospital, practice) — the SaaS tenant."""
+
+    __tablename__ = "organizations"
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    name = Column(String(255), nullable=False)
+    slug = Column(String(128), unique=True, nullable=False, index=True)
+    address = Column(Text, nullable=True)
+    phone = Column(String(32), nullable=True)
+    email = Column(String(255), nullable=True)
+    registration_number = Column(String(128), nullable=True)  # Clinic registration / NABH
+    subscription_tier = Column(Enum(SubscriptionTier), default=SubscriptionTier.FREE)
+    subscription_starts_at = Column(DateTime, nullable=True)
+    subscription_ends_at = Column(DateTime, nullable=True)
+    max_staff = Column(Integer, default=5)
+    max_patients = Column(Integer, default=100)
+    is_active = Column(Boolean, default=True)
+    onboarding_completed = Column(Boolean, default=False)
+    metadata_json = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    staff = relationship("User", back_populates="organization", cascade="all, delete-orphan")
+    patients = relationship("Patient", back_populates="organization", cascade="all, delete-orphan")
+
 
 # ═══════════════════════════════════════════════════
 # User & Auth
@@ -112,6 +150,7 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     full_name = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), default=UserRole.READ_ONLY)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     is_active = Column(Boolean, default=True)
     is_locked = Column(Boolean, default=False)
     login_attempts = Column(Integer, default=0)
@@ -119,6 +158,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    organization = relationship("Organization", back_populates="staff")
     audit_logs = relationship("AuditLog", back_populates="user")
 
 
@@ -131,10 +171,13 @@ class Patient(Base):
     __table_args__ = (
         Index("ix_patient_mrn", "mrn"),
         Index("ix_patient_abha", "abha_number"),
+        Index("ix_patient_tenant", "tenant_id"),
+        UniqueConstraint("tenant_id", "mrn", name="uq_tenant_mrn"),
     )
 
     id = Column(String(36), primary_key=True, default=_uuid)
-    mrn = Column(String(64), unique=True, nullable=False, index=True)
+    mrn = Column(String(64), nullable=False, index=True)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     first_name = Column(Text, nullable=False)
     last_name = Column(Text, nullable=False)
     date_of_birth = Column(Date, nullable=True)
@@ -163,6 +206,7 @@ class Patient(Base):
     created_by = Column(String(36), nullable=True)
     data_retention_until = Column(Date, nullable=True)
 
+    organization = relationship("Organization", back_populates="patients")
     accounts = relationship("PatientAccountLink", back_populates="patient", cascade="all, delete-orphan")
     records = relationship("PatientRecord", back_populates="patient", cascade="all, delete-orphan")
     consents = relationship("ConsentRecord", back_populates="patient", cascade="all, delete-orphan")

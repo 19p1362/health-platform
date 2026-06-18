@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthBridge — Healthcare Data Orchestration Platform</title>
+  <meta name="description" content="Connect ABHA, Aadhaar eKYC, C-CDA, HL7 v2, and any EHR into a single FHIR R4 platform with full DPDP 2025 compliance.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" type="image/svg+xml" href="/static/images/logo.svg">
+</head>
+<body>
+  <div class="app-container">
+    <!-- ═══ HEADER ═══ -->
+    <header class="app-header">
+      <div class="header-inner">
+        <a href="/" class="logo" onclick="navigate('/')">
+          <img src="/static/images/logo.svg" alt="HealthBridge" height="36">
+        </a>
+        <nav class="nav-links">
+          <a href="/">Home</a>
+          <a href="/features" onclick="event.preventDefault();document.getElementById('features-section').scrollIntoView({behavior:'smooth'})">Features</a>
+          <a href="/pricing">Pricing</a>
+          <a href="https://github.com" target="_blank">GitHub</a>
+          <a href="/docs" target="_blank">API Docs</a>
+          <span id="auth-area"><a href="/login" class="auth-btn">Sign In</a></span>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="main-content" id="app-content">
+      <!-- Dynamically rendered by SPA -->
+    </main>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <div>
+          <img src="/static/images/logo.svg" alt="HealthBridge" height="28" style="filter:brightness(10);margin-bottom:12px">
+          <p style="font-size:13px;line-height:1.7">Healthcare Data Orchestration Platform — FHIR R4, DPDP 2025 Compliant. Connecting India's healthcare ecosystem.</p>
+          <p style="margin-top:8px">🏥 NDHM/ABHA · 🔐 DPDP 2025 · 📋 FHIR R4</p>
+        </div>
+        <div>
+          <h4>Platform</h4>
+          <a href="/features" onclick="navigate('/')">Features</a>
+          <a href="/pricing" onclick="navigate('/pricing')">Pricing</a>
+          <a href="/docs" target="_blank">API Docs</a>
+          <a href="https://github.com" target="_blank">GitHub</a>
+        </div>
+        <div>
+          <h4>Compliance</h4>
+          <a href="#">DPDP Act 2025</a>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Data Processing</a>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <a href="mailto:hello@healthbridge.com">hello@healthbridge.com</a>
+          <a href="#">Support Portal</a>
+          <a href="#">Report Issue</a>
+          <p style="margin-top:8px;font-size:12px">Hyderabad, Telangana, India</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 HealthBridge Platform. MIT License. Made with ❤️ in India.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/pages.js"></script>
+  <script>
+    // Initial page render
+    renderPage();
+
+    // Smooth scroll for features link on landing page
+    document.querySelector('a[href="/features"]')?.addEventListener('click', function(e) {
+      if (location.pathname === '/') {
+        e.preventDefault();
+        const el = document.querySelector('.features-grid');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  </script>
+</body>
+</html>

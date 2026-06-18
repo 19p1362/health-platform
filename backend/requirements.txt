@@ -1,0 +1,65 @@
+# ── Core Framework ──
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# ── Database ──
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# ── Auth & Security ──
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+python-multipart==0.0.19
+cryptography==44.0.0
+PyJWT==2.10.1
+
+# ── FHIR & Healthcare ──
+fhir.resources>=6.5.0,<9.0.0  # FHIR R4 Python models
+xmltodict==0.14.2            # C-CDA XML parsing
+lxml==5.3.0                  # XML processing
+defusedxml==0.7.1            # Safe XML parsing (XXE protection)
+
+# ── ABHA & Aadhaar ──
+httpx==0.28.1                 # Async HTTP client
+pycryptodome==3.21.0          # Aadhaar XML encryption/signing
+
+# ── Redis / Caching ──
+redis[hiredis]==5.2.1
+hiredis==3.0.0
+
+# ── Utilities ──
+python-dotenv==1.0.1
+tenacity==9.0.0               # Retry logic
+python-dateutil==2.9.0
+pytz==2024.2
+email-validator==2.2.0
+
+# ── Observability ──
+prometheus-client==0.21.1
+structlog==24.4.0
+
+# ── Background Tasks ──
+apscheduler==3.10.4
+
+# ── CORS & Middleware ──
+slowapi==0.1.9                # Rate limiting
+
+# ── Document Ingestion (OCR + AI) ──
+pytesseract==0.3.13
+Pillow==11.1.0
+pdfplumber==0.11.4
+pdf2image==1.17.0
+
+# ── Testing ──
+requests==2.32.3
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+httpx==0.28.1
+
+# ── Dev ──
+alembic==1.14.0

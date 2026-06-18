@@ -1,0 +1,118 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthbridge-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://healthbridge:healthbridge2025@db:5432/healthbridge
+      - REDIS_URL=redis://:healthbridge-redis@redis:6379/0
+      - ENVIRONMENT=production
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - healthbridge-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: healthbridge-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - healthbridge-net
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: healthbridge-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: healthbridge
+      POSTGRES_PASSWORD: healthbridge2025
+      POSTGRES_DB: healthbridge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthbridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthbridge-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthbridge-cache
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass healthbridge-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - healthbridge-net
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: healthbridge-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@healthbridge.local
+      PGADMIN_DEFAULT_PASSWORD: admin2025
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+    profiles:
+      - dev
+    networks:
+      - healthbridge-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: healthbridge-storage
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: healthbridge
+      MINIO_ROOT_PASSWORD: healthbridge2025
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    profiles:
+      - dev
+    networks:
+      - healthbridge-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+  minio_data:
+  backend_data:
+  backend_uploads:
+
+networks:
+  healthbridge-net:
+    driver: bridge

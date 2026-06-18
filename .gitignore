@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+*.env.*.local
+
+# Docker
+.docker/
+
+# Data
+*.db
+*.sqlite
+*.sqlite3
+data/*.csv
+data/processed/
+data/raw/
+
+# Orchestrator
+healthcare_orchestra.db
+
+# Logs
+*.log
+
+# Ruff
+.ruff_cache/

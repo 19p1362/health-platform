@@ -4,9 +4,9 @@
   "private": true,
   "description": "HealthBridge Platform — Healthcare Data Orchestration + AI Care Agents (FHIR R4, DPDP 2025)",
   "scripts": {
-    "start": "concurrently -n backend,frontend -c blue,green \"npm run backend\" \"npm run frontend\"",
-    "backend": "cd backend && (test -d venv || python3 -m venv venv) && venv/bin/pip install -q -r requirements.txt && venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload",
-    "frontend": "cd frontend && npm install -s && npm run dev",
+    "start": "bash start.sh",
+    "backend": "cd backend && ./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload",
+    "frontend": "cd frontend && npm run dev",
     "orchestrator": "cd orchestrator && pip install -q -r ../backend/requirements.txt && python run.py --all",
     "orchestrator:once": "cd orchestrator && python run.py --orchestrator --once",
     "orchestrator:dashboard": "cd orchestrator && python run.py --dashboard",

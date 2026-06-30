@@ -21,6 +21,8 @@ from app.api.admin import router as admin_router
 from app.api.ingestion import router as ingestion_router
 from app.api.whatsapp import router as whatsapp_router
 from app.api.organizations import router as organizations_router
+from app.api.exports import router as exports_router
+from app.api.connectors import router as connectors_router
 
 from app.config import settings
 from app.database import init_db
@@ -148,6 +150,8 @@ app.include_router(admin_router)
 app.include_router(ingestion_router)
 app.include_router(whatsapp_router)
 app.include_router(organizations_router)
+app.include_router(exports_router)
+app.include_router(connectors_router)
 
 
 # ═══════════════════════════════════════════

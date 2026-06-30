@@ -15,6 +15,7 @@ import {
   LogOut,
   Bell,
   Upload,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -27,6 +28,7 @@ const navItems = [
   { to: '/audit', icon: FileSearch, label: 'Audit Log' },
   { to: '/compliance', icon: CheckSquare, label: 'Compliance' },
   { to: '/upload', icon: Upload, label: 'Upload' },
+  { to: '/exports', icon: Download, label: 'Exports' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

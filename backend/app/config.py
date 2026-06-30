@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "HealthBridge API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
-    SECRET_KEY: str = "change-me-in-production"
+    SECRET_KEY: str = ""
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
 
     # Database
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
 
     # JWT
-    JWT_SECRET: str = "change-me-in-production"
+    JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -110,6 +110,19 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# ── Startup Validation ──
+if settings.ENVIRONMENT == "production":
+    if not settings.SECRET_KEY or settings.SECRET_KEY == "change-me-in-production":
+        raise RuntimeError(
+            "SECRET_KEY must be set to a secure random value in production. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+    if not settings.JWT_SECRET or settings.JWT_SECRET == "change-me-in-production":
+        raise RuntimeError(
+            "JWT_SECRET must be set to a secure random value in production. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
 
 # ── Paths ──
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

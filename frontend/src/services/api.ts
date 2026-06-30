@@ -291,4 +291,112 @@ export const healthApi = {
   },
 };
 
+// ---- Export API ----
+export const exportApi = {
+  getPatients: async (format: 'csv' | 'json' = 'json', filters?: Record<string, string>): Promise<Response> => {
+    const query = new URLSearchParams({ format, ...filters });
+    return fetchWithAuth(`/api/v1/exports/patients?${query.toString()}`);
+  },
+
+  downloadPatientsCsv: async (): Promise<Blob> => {
+    const res = await fetchWithAuth('/api/v1/exports/patients?format=csv');
+    return res.blob();
+  },
+
+  getPatientFhirBundle: async (patientId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/exports/patient/${patientId}/fhir-bundle`, {
+      method: 'POST',
+    });
+    return res.json();
+  },
+
+  getPatientRecords: async (patientId: string, format: 'csv' | 'json' = 'json'): Promise<Response> => {
+    const res = await fetchWithAuth(`/api/v1/exports/patient/${patientId}/records?format=${format}`, {
+      method: 'POST',
+    });
+    return res;
+  },
+
+  downloadAuditLogs: async (startDate?: string, endDate?: string): Promise<Blob> => {
+    const query = new URLSearchParams();
+    if (startDate) query.set('startDate', startDate);
+    if (endDate) query.set('endDate', endDate);
+    const res = await fetchWithAuth(`/api/v1/exports/audit-logs?${query.toString()}`);
+    return res.blob();
+  },
+
+  getComplianceReport: async (): Promise<any> => {
+    const res = await fetchWithAuth('/api/v1/exports/compliance-report');
+    return res.json();
+  },
+
+  getHistory: async (): Promise<any[]> => {
+    const res = await fetchWithAuth('/api/v1/exports/history');
+    return res.json();
+  },
+
+  scheduleExport: async (schedule: {
+    cronExpression: string;
+    format: string;
+    scope: string;
+  }): Promise<any> => {
+    const res = await fetchWithAuth('/api/v1/exports/scheduled', {
+      method: 'POST',
+      body: JSON.stringify(schedule),
+    });
+    return res.json();
+  },
+};
+
+// ---- Connector API ----
+export const connectorApi = {
+  getTypes: async (): Promise<any[]> => {
+    const res = await fetchWithAuth('/api/v1/connectors/types');
+    return res.json();
+  },
+
+  list: async (): Promise<any[]> => {
+    const res = await fetchWithAuth('/api/v1/connectors');
+    return res.json();
+  },
+
+  register: async (config: {
+    type: string;
+    name: string;
+    config: Record<string, any>;
+  }): Promise<any> => {
+    const res = await fetchWithAuth('/api/v1/connectors', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+    return res.json();
+  },
+
+  test: async (connectorId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/connectors/${connectorId}/test`, {
+      method: 'POST',
+    });
+    return res.json();
+  },
+
+  sync: async (connectorId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/connectors/${connectorId}/sync`, {
+      method: 'POST',
+    });
+    return res.json();
+  },
+
+  remove: async (connectorId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/connectors/${connectorId}`, {
+      method: 'DELETE',
+    });
+    return res.json();
+  },
+
+  getStatus: async (connectorId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/connectors/${connectorId}/status`);
+    return res.json();
+  },
+};
+
 export { API_BASE, ApiError, fetchWithAuth };

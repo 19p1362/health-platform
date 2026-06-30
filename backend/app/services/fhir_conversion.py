@@ -917,6 +917,57 @@ class FhirConversionService:
 
         return result
 
+    def build_fhir_bundle_from_record(self, record: Any) -> str | None:
+        """Build a FHIR Bundle JSON string from a PatientRecord.
+
+        Creates a minimal FHIR Bundle with a single resource entry
+        using the record's stored fhir_resource_json or constructed data.
+
+        Args:
+            record: A PatientRecord ORM instance.
+
+        Returns:
+            JSON string of a FHIR Bundle, or None if the record has no data.
+        """
+        import json
+
+        resource_type = record.fhir_resource_type or "Observation"
+        resource_id = record.id
+
+        resource = {
+            "resourceType": resource_type,
+            "id": resource_id,
+            "subject": {"reference": f"Patient/{record.patient_id}"},
+            "code": {
+                "coding": [
+                    {
+                        "system": record.code_system or "",
+                        "code": record.code or "",
+                    }
+                ],
+                "text": record.display_name or "",
+            },
+            "status": "final",
+        }
+
+        if record.recorded_date:
+            date_str = record.recorded_date.isoformat() if hasattr(record.recorded_date, "isoformat") else str(record.recorded_date)
+            resource["recordedDate"] = date_str
+
+        bundle = {
+            "resourceType": "Bundle",
+            "id": str(uuid.uuid4()),
+            "type": "collection",
+            "entry": [
+                {
+                    "fullUrl": f"urn:uuid:{resource_id}",
+                    "resource": resource,
+                }
+            ],
+        }
+
+        return json.dumps(bundle)
+
     def validate_fhir(self, bundle_json: dict[str, Any]) -> dict[str, Any]:
         """Validate FHIR R4 Bundle against core profiles.
 

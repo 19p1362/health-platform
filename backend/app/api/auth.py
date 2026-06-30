@@ -121,7 +121,12 @@ async def refresh(request: RefreshRequest, req: Request, db: AsyncSession = Depe
 
 @router.post("/register")
 async def register(request: RegisterRequest, req: Request, db: AsyncSession = Depends(get_db)):
-    """Register a new user (admin function — disabled in production without admin token)."""
+    """Register a new user.
+
+    NOTE: New registrations default to READ_ONLY role.
+    To create admin/doctor accounts, use the admin API (/api/v1/admin/users)
+    after logging in with an existing admin account.
+    """
     from sqlalchemy import select
     result = await db.execute(select(User).where(User.email == request.email))
     if result.scalar_one_or_none():
@@ -131,7 +136,7 @@ async def register(request: RegisterRequest, req: Request, db: AsyncSession = De
         email=request.email,
         password_hash=hash_password(request.password),
         full_name=request.full_name,
-        role=UserRole.ADMIN,
+        role=UserRole.READ_ONLY,
     )
     db.add(user)
     await db.flush()

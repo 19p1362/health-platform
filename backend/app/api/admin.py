@@ -132,7 +132,7 @@ async def purge_audit_logs(
     from datetime import date
 
     before_date = date.today() - timedelta(days=retention_days)
-    count = purge_audit_logs(before_date)
+    count = await purge_audit_logs(before_date)
 
     return {
         "purged_count": count,

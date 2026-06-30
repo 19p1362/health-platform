@@ -70,16 +70,10 @@ def run(db: Database) -> dict:
             )
 
             if phone:
-                # Try to send WhatsApp via the webhook infrastructure
+                # Log the welcome message internally (no WhatsApp sending in agent loop)
                 try:
-                    form_data = {
-                        "From": f"whatsapp:{phone}",
-                        "To": "system",
-                        "Body": "welcome",
-                    }
-                    handle_webhook(form_data)
                     db.log_communication(
-                        channel="whatsapp",
+                        channel="internal",
                         recipient=phone,
                         subject="Welcome",
                         body=welcome_msg,
@@ -87,11 +81,11 @@ def run(db: Database) -> dict:
                     result["patients_contacted"] += 1
                 except Exception as comm_exc:
                     logger.warning(
-                        "WhatsApp send failed for %s: %s — logging only",
+                        "Communication log failed for %s: %s — skipping",
                         phone, comm_exc,
                     )
                     db.log_communication(
-                        channel="whatsapp",
+                        channel="internal",
                         recipient=phone,
                         subject="Welcome (logged)",
                         body=welcome_msg,

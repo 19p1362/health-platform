@@ -18,6 +18,7 @@ import AuditLogViewer from './pages/AuditLogViewer';
 import ComplianceDashboard from './pages/ComplianceDashboard';
 import DocumentUpload from './pages/DocumentUpload';
 import Settings from './pages/Settings';
+import ExportCenter from './pages/ExportCenter';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,7 @@ const App: React.FC = () => {
               <Route path="/compliance" element={<ComplianceDashboard />} />
               <Route path="/upload" element={<DocumentUpload />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/exports" element={<ExportCenter />} />
             </Route>
           </Routes>
         </AuthProvider>

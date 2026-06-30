@@ -21,7 +21,7 @@ from app.security.auth import (
 from app.security.tenant import get_current_tenant, require_org_admin, require_super_admin
 from app.security.audit import log_action
 from app.models import (
-    Organization, User, UserRole, SubscriptionTier,
+    Organization, User, UserRole, SubscriptionTier, Patient,
     AuditAction
 )
 
@@ -231,8 +231,7 @@ async def get_my_organization(
         select(func.count(User.id)).where(User.tenant_id == org.id)
     )
     patient_count_result = await db.execute(
-        select(func.count()).select_from(type(org).patients.property.mapper.class_)
-        .where(type(org).patients.property.mapper.class_.tenant_id == org.id)
+        select(func.count(Patient.id)).where(Patient.tenant_id == org.id)
     )
 
     return OrgResponse(
@@ -248,8 +247,8 @@ async def get_my_organization(
         onboarding_completed=org.onboarding_completed,
         max_staff=org.max_staff,
         max_patients=org.max_patients,
-        staff_count=0,
-        patient_count=0,
+        staff_count=staff_count_result.scalar() or 0,
+        patient_count=patient_count_result.scalar() or 0,
         created_at=org.created_at.isoformat() if org.created_at else "",
     )
 
@@ -264,7 +263,7 @@ async def update_my_organization(
     if current_user.role not in (UserRole.ORG_ADMIN, UserRole.SUPER_ADMIN):
         raise HTTPException(status_code=403, detail="Organization admin privileges required")
 
-    from sqlalchemy import select
+    from sqlalchemy import select, func
     org = await db.execute(select(Organization).where(Organization.id == current_user.tenant_id))
     org = org.scalar_one_or_none()
     if not org:
@@ -283,6 +282,14 @@ async def update_my_organization(
 
     await db.flush()
 
+    # Count staff and patients
+    staff_count_result = await db.execute(
+        select(func.count(User.id)).where(User.tenant_id == org.id)
+    )
+    patient_count_result = await db.execute(
+        select(func.count(Patient.id)).where(Patient.tenant_id == org.id)
+    )
+
     return OrgResponse(
         id=org.id,
         name=org.name,
@@ -296,8 +303,8 @@ async def update_my_organization(
         onboarding_completed=org.onboarding_completed,
         max_staff=org.max_staff,
         max_patients=org.max_patients,
-        staff_count=0,
-        patient_count=0,
+        staff_count=staff_count_result.scalar() or 0,
+        patient_count=patient_count_result.scalar() or 0,
         created_at=org.created_at.isoformat() if org.created_at else "",
     )
 

@@ -903,6 +903,12 @@ tbody tr.clickable:hover {
   border-width: 2px;
 }
 
+/* Inline spin animation for icons inside buttons */
+.spin {
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
 .loading-text {
   font-size: 0.88rem;
   color: var(--muted);

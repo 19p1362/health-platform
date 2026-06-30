@@ -37,7 +37,8 @@ class RoleHierarchy(IntEnum):
     COORDINATOR = 40
     NURSE = 60
     DOCTOR = 80
-    ADMIN = 100
+    ORG_ADMIN = 100
+    SUPER_ADMIN = 120
 
     @classmethod
     def from_user_role(cls, role: UserRole) -> "RoleHierarchy":
@@ -46,7 +47,8 @@ class RoleHierarchy(IntEnum):
             UserRole.COORDINATOR: cls.COORDINATOR,
             UserRole.NURSE: cls.NURSE,
             UserRole.DOCTOR: cls.DOCTOR,
-            UserRole.ADMIN: cls.ADMIN,
+            UserRole.ORG_ADMIN: cls.ORG_ADMIN,
+            UserRole.SUPER_ADMIN: cls.SUPER_ADMIN,
         }
         if role not in mapping:
             raise ValueError(f"Unknown role: {role}")
@@ -81,7 +83,11 @@ _PERMISSION_MATRIX: dict[str, set[str]] = {
     "COORDINATOR": {"patient.read", "patient.write", "consent.manage", "audit.view"},
     "NURSE": {"patient.read", "patient.write", "consent.manage", "audit.view"},
     "DOCTOR": {"patient.read", "patient.write", "patient.export", "consent.manage", "audit.view"},
-    "ADMIN": {
+    "ORG_ADMIN": {
+        "patient.read", "patient.write", "patient.export", "patient.delete",
+        "consent.manage", "audit.view", "user.manage", "system.admin",
+    },
+    "SUPER_ADMIN": {
         "patient.read", "patient.write", "patient.export", "patient.delete",
         "consent.manage", "audit.view", "user.manage", "system.admin",
     },

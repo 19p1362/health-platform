@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hermes": {
+      "command": "wsl.exe",
+      "args": ["/home/abisa/.local/bin/hermes", "mcp", "serve", "--accept-hooks"]
+    }
+  }
+}

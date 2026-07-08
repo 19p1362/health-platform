@@ -10,12 +10,11 @@ from app.config import settings, DATA_DIR
 
 
 # ── Database URLs ──
-# Use SQLite by default (dev), PostgreSQL in production
 SQLITE_URL = f"sqlite+aiosqlite:///{DATA_DIR / 'healthbridge.db'}"
 ASYNC_DB_URL = settings.DATABASE_URL if settings.DATABASE_URL.startswith("postgresql") else SQLITE_URL
 SYNC_DB_URL = settings.DATABASE_SYNC_URL or ASYNC_DB_URL.replace("+aiosqlite", "").replace("+asyncpg", "")
 
-# ── Engines ──
+# ── Engines (module-level, created once on import) ──
 is_postgres = "postgresql" in ASYNC_DB_URL
 
 async_engine_kw = {"echo": settings.DEBUG, "pool_pre_ping": True}

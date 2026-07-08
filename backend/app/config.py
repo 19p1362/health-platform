@@ -96,7 +96,7 @@ class Settings(BaseSettings):
     # Twilio WhatsApp
     TWILIO_WHATSAPP_NUMBER: str = ""
 
-    model_config = {"env_file": ".env", "case_sensitive": True}
+    model_config = {"env_file": ".env", "case_sensitive": True, "extra": "ignore"}
 
     @property
     def cors_origins_list(self) -> list[str]:

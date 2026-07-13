@@ -5,6 +5,10 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
+# UTC now factory for SQLAlchemy default — evaluated per-row, not at import
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
 from sqlalchemy import (
     Column, String, Text, Integer, Boolean, DateTime, Date,
     Enum, ForeignKey, JSON, UniqueConstraint, Index
@@ -131,8 +135,8 @@ class Organization(Base):
     is_active = Column(Boolean, default=True)
     onboarding_completed = Column(Boolean, default=False)
     metadata_json = Column(JSON, default=dict)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     staff = relationship("User", back_populates="organization", cascade="all, delete-orphan")
     patients = relationship("Patient", back_populates="organization", cascade="all, delete-orphan")
@@ -155,8 +159,8 @@ class User(Base):
     is_locked = Column(Boolean, default=False)
     login_attempts = Column(Integer, default=0)
     last_login = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     organization = relationship("Organization", back_populates="staff")
     audit_logs = relationship("AuditLog", back_populates="user")
@@ -201,8 +205,8 @@ class Patient(Base):
     city = Column(String(128), nullable=True)
     state = Column(String(128), nullable=True)
     pincode = Column(String(16), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
     created_by = Column(String(36), nullable=True)
     data_retention_until = Column(Date, nullable=True)
 
@@ -227,7 +231,7 @@ class PatientAccountLink(Base):
     last_sync = Column(DateTime, nullable=True)
     real_time_connected = Column(Boolean, default=False)
     metadata_json = Column(JSON, default=dict)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     patient = relationship("Patient", back_populates="accounts")
 
@@ -262,7 +266,7 @@ class PatientRecord(Base):
     provider_name = Column(String(255), nullable=True)
     facility_name = Column(String(255), nullable=True)
     consent_id_used = Column(String(64), nullable=True)
-    ingested_at = Column(DateTime, default=datetime.utcnow)
+    ingested_at = Column(DateTime, default=utcnow)
     ingested_by = Column(String(36), nullable=True)
     is_active = Column(Boolean, default=True)
 
@@ -286,7 +290,7 @@ class ConsentRecord(Base):
     duration_days = Column(Integer, nullable=True)
     status = Column(Enum(ConsentStatus), default=ConsentStatus.GRANTED)
     previous_status = Column(Enum(ConsentStatus), nullable=True)
-    granted_at = Column(DateTime, default=datetime.utcnow)
+    granted_at = Column(DateTime, default=utcnow)
     withdrawn_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=True)
     notice_provided = Column(Boolean, default=True)
@@ -294,7 +298,7 @@ class ConsentRecord(Base):
     notice_text = Column(Text, nullable=True)
     withdrawal_mechanism = Column(Text, nullable=True)
     recorded_by = Column(String(36), nullable=True)
-    recorded_at = Column(DateTime, default=datetime.utcnow)
+    recorded_at = Column(DateTime, default=utcnow)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
 
@@ -314,7 +318,7 @@ class DataBreach(Base):
     breach_type = Column(String(128), nullable=True)
     severity = Column(Enum(BreachSeverity), default=BreachSeverity.MEDIUM)
     status = Column(Enum(BreachStatus), default=BreachStatus.DETECTED)
-    detected_at = Column(DateTime, default=datetime.utcnow)
+    detected_at = Column(DateTime, default=utcnow)
     occurred_at = Column(DateTime, nullable=True)
     contained_at = Column(DateTime, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
@@ -331,8 +335,8 @@ class DataBreach(Base):
     investigator_notes = Column(Text, nullable=True)
     findings_json = Column(JSON, default=dict)
     created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class BreachNotification(Base):
@@ -343,7 +347,7 @@ class BreachNotification(Base):
     patient_id = Column(String(36), ForeignKey("patients.id", ondelete="SET NULL"), nullable=True)
     channel = Column(String(32), nullable=False)
     recipient = Column(String(255), nullable=False)
-    sent_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, default=utcnow)
     delivered = Column(Boolean, default=False)
     delivery_status = Column(String(64), nullable=True)
     breach_description = Column(Text, nullable=False)
@@ -369,7 +373,7 @@ class DataPrincipalRequest(Base):
     request_details = Column(JSON, default=dict)
     status = Column(String(32), default="PENDING")
     rejection_reason = Column(Text, nullable=True)
-    filed_at = Column(DateTime, default=datetime.utcnow)
+    filed_at = Column(DateTime, default=utcnow)
     sla_deadline = Column(DateTime, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
     response_data = Column(JSON, default=dict)
@@ -377,8 +381,8 @@ class DataPrincipalRequest(Base):
     verified_by = Column(String(36), nullable=True)
     verification_method = Column(String(64), nullable=True)
     created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 # ═══════════════════════════════════════════════════
@@ -394,7 +398,7 @@ class AuditLog(Base):
     )
 
     id = Column(String(36), primary_key=True, default=_uuid)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(DateTime, default=utcnow, nullable=False, index=True)
     action = Column(Enum(AuditAction), nullable=False)
     patient_id = Column(String(36), ForeignKey("patients.id", ondelete="SET NULL"), nullable=True, index=True)
     resource_id = Column(String(64), nullable=True)
@@ -430,7 +434,7 @@ class ErasureSchedule(Base):
     executed_by = Column(String(36), nullable=True)
     execution_status = Column(String(32), default="PENDING")
     records_affected = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
 
 # ═══════════════════════════════════════════════════
@@ -447,7 +451,7 @@ class CommunicationLog(Base):
     subject = Column(String(255), nullable=True)
     body_preview = Column(Text, nullable=True)
     purpose = Column(String(64), nullable=True)
-    sent_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, default=utcnow)
     delivered = Column(Boolean, default=False)
     delivery_status = Column(String(64), nullable=True)
     read_at = Column(DateTime, nullable=True)
@@ -472,7 +476,7 @@ class ABHATransaction(Base):
     response_status = Column(Integer, nullable=True)
     response_body = Column(JSON, default=dict)
     error_message = Column(Text, nullable=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=utcnow)
     completed_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)
     user_id = Column(String(36), nullable=True)
@@ -499,7 +503,7 @@ class ConversionLog(Base):
     error_message = Column(Text, nullable=True)
     fhir_version = Column(String(8), default="R4")
     created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
 
 # ═══════════════════════════════════════════════════
@@ -527,7 +531,7 @@ class IngestionLog(Base):
     error_message = Column(Text, nullable=True)
     processing_time_ms = Column(Integer, nullable=True)
     created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
 
 # ═══════════════════════════════════════════════════
@@ -558,4 +562,4 @@ class WhatsAppMessageLog(Base):
     reply_text = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
     raw_payload = Column(JSON, default=dict)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)

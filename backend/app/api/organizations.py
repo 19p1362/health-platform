@@ -422,21 +422,26 @@ async def list_all_organizations(
     db: AsyncSession = Depends(get_db),
 ):
     """List all organizations (super admin only)."""
-    from sqlalchemy import select
+    from sqlalchemy import select, func
     result = await db.execute(select(Organization).order_by(Organization.created_at.desc()))
     orgs = result.scalars().all()
-    return [
-        {
+    org_list = []
+    for o in orgs:
+        # Count staff per org
+        staff_count_result = await db.execute(
+            select(func.count(User.id)).where(User.tenant_id == o.id)
+        )
+        staff_count = staff_count_result.scalar() or 0
+        org_list.append({
             "id": o.id,
             "name": o.name,
             "slug": o.slug,
             "tier": o.subscription_tier.value,
             "is_active": o.is_active,
-            "staff_count": 0,
+            "staff_count": staff_count,
             "created_at": o.created_at.isoformat() if o.created_at else "",
-        }
-        for o in orgs
-    ]
+        })
+    return org_list
 
 
 @router.put("/{org_id}/tier")

@@ -25,6 +25,7 @@ class TaskStatus(str, Enum):
     SKIPPED = "SKIPPED"
 
 class Phase(str, Enum):
+    EXISTING = "Section B — Existing Strengths (Working Well)"
     FOUNDATION = "Foundation & Compliance (Days 1-10)"
     DOCTOR_WORKFLOW = "Doctor Workflow (Days 8-14)"
     FINANCIAL = "Financial (Days 15-21)"
@@ -55,7 +56,61 @@ class Task:
 # ═══════════════════════════════════════════════════════════════
 
 TASKS: List[Task] = [
+    # ═══════════════════════════════════════════════════════════════
+    # Section B — What Already Exists & Works Well (COMPLETED)
+    # ═══════════════════════════════════════════════════════════════
+    Task("B.1", 0, "16 API Routers Fully Wired",
+         "Auth, patients, FHIR R4, consent, compliance, admin, ingestion, conversion, exports, connectors, organizations, WhatsApp — all 16 routers fully implemented and registered",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["16 routers", "FastAPI integration", "OpenAPI docs"]),
+    Task("B.2", 0, "DPDP 2025 Compliance Service (2,716 lines)",
+         "Consent management, breach notification, erasure scheduling, cross-border transfer controls, grievance redressal (90-day SLA), data principal rights (access, correction, portability)",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["Consent engine", "Breach workflow", "Erasure scheduler", "Rights APIs", "90-day SLA"]),
+    Task("B.3", 0, "FHIR Conversion Service (2,757 lines)",
+         "C-CDA ↔ FHIR R4, HL7 v2 ↔ FHIR R4, FHIR ↔ PDF, structured and validated",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["C-CDA converter", "HL7 v2 converter", "PDF generator", "Validator"]),
+    Task("B.4", 0, "Document Ingestion Pipeline",
+         "Aadhaar eKYC, photo/PDF → OCR (Tesseract) → AI extraction → FHIR R4 Bundle with OTC verification, XML decryption, SHA-256 hashing",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["eKYC module", "OCR pipeline", "AI extraction", "FHIR Bundle output", "SHA-256 hashing"]),
+    Task("B.5", 0, "ABHA Connector (595 lines)",
+         "Ayushman Bharat Health Account — ABHA address linking, health record sharing, consent artefact management",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["ABHA linking", "Record sharing", "Consent artefacts"]),
+    Task("B.6", 0, "Audit Trail (Append-Only, Context-Manager Pattern)",
+         "Immutable audit logs, DPDP 1-year purge, context-manager for auto-capture, user/IP/action tracking",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["Append-only logs", "Auto-capture CM", "1-year purge", "Full traceability"]),
+    Task("B.7", 0, "Fernet Encryption (3-Tier Key Resolution)",
+         "Tier 1: Env var (FERNET_KEY), Tier 2: File (/etc/healthbridge/fernet.key), Tier 3: Auto-generated (dev), correct field masking in logs",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["3-tier resolution", "Field masking", "Key rotation ready"]),
+    Task("B.8", 0, "Multi-Tenant Organizations",
+         "Full org onboarding with slug, subscription tiers (FREE/STARTER/PROFESSIONAL/ENTERPRISE), staff limits, patient limits, 3 EHR connectors (ABDM, OpenMRS, Generic FHIR R4)",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["Org onboarding", "4 subscription tiers", "3 EHR connectors", "Staff/patient limits"]),
+    Task("B.9", 0, "10 AI Care Agents (Orchestrator)",
+         "All 10 agents execute end-to-end without exceptions (verified by --migrate --seed --orchestrator --once): Patient Intake, Medication Adherence, Follow-Up, Appointment, Risk Prediction, Family Care, Voice Care, Pharmacy, Lab, Insurance",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["10 agents", "Agent loop", "FHIR sync", "SQLite schema"]),
+    Task("B.10", 0, "Frontend (14 Pages, 12 with Full State Handling)",
+         "React 18 + TypeScript + Vite, polished dark theme (1,719-line CSS design system), TanStack Query (30s stale time, retry, no refetch on focus), Export Center (705 lines), Document Upload (drag-drop, preview, 6 doc types, patient search, recent uploads)",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["14 pages", "Design system", "TanStack Query", "Export Center", "Document Upload"]),
+    Task("B.11", 0, "Orchestrator Strengths",
+         "14-table SQLite schema with proper FKs, indexes, unique constraints (patients, meds, labs, appointments), real FHIR endpoint calls to backend (sync_from_healthbridge()), good code quality (type hints, docstrings, try/except on all DB/API calls)",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["14-table schema", "FHIR sync", "Type safety", "Error handling"]),
+    Task("B.12", 0, "3 EHR Connectors",
+         "ABDM (India), OpenMRS (open-source), Generic FHIR R4 — production-ready connectors with sync, test, and status endpoints",
+         Phase.EXISTING, TaskStatus.COMPLETED, 0.0,
+         deliverables=["ABDM connector", "OpenMRS connector", "Generic FHIR connector"]),
+
+    # ═══════════════════════════════════════════════════════════════
     # Phase 1: Foundation & Compliance (Days 1-10)
+    # ═══════════════════════════════════════════════════════════════
     Task("1.1", 1, "Fix datetime.utcnow() SQLAlchemy defaults", 
          "Replace all datetime.utcnow() defaults with utcnow() factory for per-row evaluation",
          Phase.FOUNDATION, TaskStatus.COMPLETED, 2.0, 
@@ -469,7 +524,12 @@ async def cmd_send_report():
 
 def cmd_list():
     loop = LoopSystem()
-    for task in sorted(loop.tasks.values(), key=lambda t: (int(t.id.split('.')[0]), t.id)):
+    def sort_key(t):
+        try:
+            return (int(t.id.split('.')[0]), t.id)
+        except ValueError:
+            return (999, t.id)  # Put non-numeric IDs at the end
+    for task in sorted(loop.tasks.values(), key=sort_key):
         status_icon = {
             TaskStatus.COMPLETED: "✅",
             TaskStatus.IN_PROGRESS: "🔄",

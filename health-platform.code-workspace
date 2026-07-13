@@ -1,0 +1,173 @@
+{
+	"folders": [
+		{
+			"path": "C:\\AI agent Workflow\\health-platform"
+		}
+	],
+	"settings": {
+		"terminal.integrated.defaultProfile.windows": "Command Prompt",
+		"terminal.integrated.profiles.windows": {
+			"WSL (Ubuntu)": {
+				"path": "wsl.exe",
+				"args": ["-d", "Ubuntu", "-e", "bash", "-c", "cd /mnt/c/AI\\ agent\\ Workflow/health-platform && exec bash"]
+			}
+		},
+		"python.defaultInterpreterPath": "/mnt/c/AI agent Workflow/health-platform/backend/venv/bin/python",
+		"python.analysis.extraPaths": [
+			"/mnt/c/AI agent Workflow/health-platform/backend"
+		],
+		"files.watcherExclude": {
+			"**/node_modules/**": true,
+			"**/__pycache__/**": true,
+			"**/.git/**": true,
+			"**/venv/**": true
+		},
+		"search.exclude": {
+			"**/node_modules": true,
+			"**/__pycache__": true,
+			"**/.git": true,
+			"**/venv": true,
+			"**/dist": true,
+			"**/build": true
+		},
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.organizeImports": "explicit"
+		},
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": true,
+		"python.linting.flake8Enabled": true,
+		"python.testing.pytestEnabled": true,
+		"python.testing.pytestArgs": [
+			"backend/tests"
+		],
+		"typescript.preferences.importModuleSpecifier": "relative",
+		"eslint.workingDirectories": [
+			"frontend"
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-python.python",
+			"ms-python.vscode-pylance",
+			"ms-python.black-formatter",
+			"ms-python.flake8",
+			"ms-python.isort",
+			"dbaeumer.vscode-eslint",
+			"esbenp.prettier-vscode",
+			"bradlc.vscode-tailwindcss",
+			"formulahendry.auto-rename-tag",
+			"christian-kohler.path-intellisense",
+			"ms-vscode.vscode-typescript-next",
+			"redhat.vscode-yaml",
+			"ms-azuretools.vscode-docker",
+			"github.vscode-github-actions",
+			"ms-vscode.remote-wsl"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "FastAPI Backend (WSL)",
+				"type": "python",
+				"request": "launch",
+				"module": "uvicorn",
+				"args": [
+					"app.main:app",
+					"--host", "0.0.0.0",
+					"--port", "8080",
+					"--reload"
+				],
+				"cwd": "/mnt/c/AI agent Workflow/health-platform/backend",
+				"env": {
+					"PYTHONPATH": "/mnt/c/AI agent Workflow/health-platform/backend"
+				},
+				"console": "integratedTerminal",
+				"justMyCode": true
+			},
+			{
+				"name": "React Frontend (WSL)",
+				"type": "node",
+				"request": "launch",
+				"runtimeExecutable": "npm",
+				"runtimeArgs": ["run", "dev"],
+				"cwd": "/mnt/c/AI agent Workflow/health-platform/frontend",
+				"console": "integratedTerminal"
+			},
+			{
+				"name": "Orchestrator (WSL)",
+				"type": "python",
+				"request": "launch",
+				"program": "/mnt/c/AI agent Workflow/health-platform/orchestrator/run.py",
+				"cwd": "/mnt/c/AI agent Workflow/health-platform/orchestrator",
+				"console": "integratedTerminal",
+				"env": {
+					"PYTHONPATH": "/mnt/c/AI agent Workflow/health-platform/orchestrator:/mnt/c/AI agent Workflow/health-platform/backend"
+				}
+			},
+			{
+				"name": "Bug Evaluation Loop",
+				"type": "python",
+				"request": "launch",
+				"program": "/mnt/c/AI agent Workflow/health-platform/bug_eval_loop.py",
+				"cwd": "/mnt/c/AI agent Workflow/health-platform",
+				"console": "integratedTerminal"
+			}
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Start All Services (WSL)",
+				"type": "shell",
+				"command": "cd /mnt/c/AI\\ agent\\ Workflow/health-platform && ./start.sh",
+				"group": "build",
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"runOptions": {
+					"runOn": "folderOpen"
+				}
+			},
+			{
+				"label": "Install Backend Deps",
+				"type": "shell",
+				"command": "cd /mnt/c/AI\\ agent\\ Workflow/health-platform/backend && pip install -r requirements.txt",
+				"group": "build",
+				"presentation": {
+					"reveal": "always"
+				}
+			},
+			{
+				"label": "Install Frontend Deps",
+				"type": "shell",
+				"command": "cd /mnt/c/AI\\ agent\\ Workflow/health-platform/frontend && npm install",
+				"group": "build",
+				"presentation": {
+					"reveal": "always"
+				}
+			},
+			{
+				"label": "Run Bug Evaluation",
+				"type": "shell",
+				"command": "cd /mnt/c/AI\\ agent\\ Workflow/health-platform && python3 bug_eval_loop.py",
+				"group": "test",
+				"presentation": {
+					"reveal": "always"
+				}
+			},
+			{
+				"label": "Docker Compose Up",
+				"type": "shell",
+				"command": "cd /mnt/c/AI\\ agent\\ Workflow/health-platform && docker compose up -d",
+				"group": "build",
+				"presentation": {
+					"reveal": "always"
+				}
+			}
+		]
+	}
+}

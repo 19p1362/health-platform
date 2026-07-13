@@ -4,6 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
+from typing import Optional
 
 # UTC now factory for SQLAlchemy default — evaluated per-row, not at import
 def utcnow() -> datetime:
@@ -111,6 +112,7 @@ class ConsentPurpose(str, PyEnum):
     RESEARCH = "RESEARCH"
     PUBLIC_HEALTH = "PUBLIC_HEALTH"
 
+
 # ═══════════════════════════════════════════════════
 # Organization (Tenant)
 # ═══════════════════════════════════════════════════
@@ -181,6 +183,7 @@ class Patient(Base):
 
     id = Column(String(36), primary_key=True, default=_uuid)
     mrn = Column(String(64), nullable=False, index=True)
+    uhid = Column(String(64), nullable=True, unique=True, index=True)  # Unique Health ID
     tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     first_name = Column(Text, nullable=False)
     last_name = Column(Text, nullable=False)
@@ -329,7 +332,6 @@ class DataBreach(Base):
     board_notified = Column(Boolean, default=False)
     board_notified_at = Column(DateTime, nullable=True)
     board_report_submitted = Column(Boolean, default=False)
-    board_report_deadline = Column(DateTime, nullable=True)
     users_notified = Column(Boolean, default=False)
     users_notified_at = Column(DateTime, nullable=True)
     investigator_notes = Column(Text, nullable=True)
@@ -538,7 +540,6 @@ class IngestionLog(Base):
 # WhatsApp Message Logs
 # ═══════════════════════════════════════════════════
 
-
 class WhatsAppMessageLog(Base):
     """Tracks WhatsApp messages processed through the ingestion webhook."""
 
@@ -563,3 +564,50 @@ class WhatsAppMessageLog(Base):
     error_message = Column(Text, nullable=True)
     raw_payload = Column(JSON, default=dict)
     created_at = Column(DateTime, default=utcnow)
+
+
+# ═══════════════════════════════════════════════════
+# OPD Token Queue
+# ═══════════════════════════════════════════════════
+
+class VisitType(str, PyEnum):
+    NEW = "NEW"
+    FOLLOWUP = "FOLLOWUP"
+    EMERGENCY = "EMERGENCY"
+    REFERRAL = "REFERRAL"
+
+class TokenStatus(str, PyEnum):
+    WAITING = "WAITING"
+    CALLED = "CALLED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    SKIPPED = "SKIPPED"
+    CANCELLED = "CANCELLED"
+
+class OPDTokenQueue(Base):
+    __tablename__ = "opd_token_queue"
+    
+    id = Column(String(36), primary_key=True, default=_uuid)
+    token_number = Column(Integer, nullable=False, index=True)
+    patient_id = Column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    visit_type = Column(Enum(VisitType), default=VisitType.NEW)
+    status = Column(Enum(TokenStatus), default=TokenStatus.WAITING, index=True)
+    queue_position = Column(Integer, default=0)
+    estimated_wait_minutes = Column(Integer, default=0)
+    called_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    doctor_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    
+    patient = relationship("Patient")
+    doctor = relationship("User")
+    tenant = relationship("Organization")
+    
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "token_number", "created_at", name="uq_tenant_token_date"),
+        Index("ix_opd_queue_tenant_status", "tenant_id", "status"),
+    )

@@ -19,6 +19,11 @@ import ComplianceDashboard from './pages/ComplianceDashboard';
 import DocumentUpload from './pages/DocumentUpload';
 import Settings from './pages/Settings';
 import ExportCenter from './pages/ExportCenter';
+import VitalSignsEntry from './pages/VitalSignsEntry';
+import OPDRegister from './pages/OPDRegister';
+import DoctorQueue from './pages/DoctorQueue';
+import WaitingAreaDisplay from './pages/WaitingAreaDisplay';
+import SOAPEditor from './pages/SOAPEditor';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +54,7 @@ const App: React.FC = () => {
               <Route index element={<Dashboard />} />
               <Route path="/patients" element={<PatientSearch />} />
               <Route path="/patients/:patientId/chart" element={<PatientChart />} />
+              <Route path="/patients/:patientId/vitals" element={<VitalSignsEntry />} />
               <Route path="/fhir" element={<FhirExplorer />} />
               <Route path="/convert" element={<ConversionTools />} />
               <Route path="/consent" element={<ConsentManager />} />
@@ -57,6 +63,10 @@ const App: React.FC = () => {
               <Route path="/upload" element={<DocumentUpload />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/exports" element={<ExportCenter />} />
+              <Route path="/opd/register" element={<OPDRegister />} />
+              <Route path="/opd/queue" element={<DoctorQueue />} />
+              <Route path="/opd/display" element={<WaitingAreaDisplay />} />
+              <Route path="/patients/:patientId/soap" element={<SOAPEditor />} />
             </Route>
           </Routes>
         </AuthProvider>

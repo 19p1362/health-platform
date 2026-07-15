@@ -15,10 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "src",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "types": ["@playwright/test", "node"]
   },
-  "include": ["src"]
+  "include": ["tests/**/*", "playwright.config.ts"]
 }

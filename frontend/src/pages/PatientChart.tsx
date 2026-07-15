@@ -17,6 +17,7 @@ import {
   AlertCircle,
   RefreshCw,
   ArrowLeft,
+  Stethoscope,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { patientApi } from '../services/api';
@@ -314,6 +315,13 @@ const PatientChart: React.FC = () => {
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            className="btn btn-primary w-full"
+            onClick={() => navigate(`/patients/${patientId}/vitals`)}
+          >
+            <Stethoscope size={16} />
+            Record Vital Signs
+          </button>
           <button
             className="btn btn-primary w-full"
             onClick={() => navigate(`/consent?patientId=${patientId}`)}

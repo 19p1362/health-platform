@@ -23,7 +23,9 @@ from app.api.whatsapp import router as whatsapp_router
 from app.api.organizations import router as organizations_router
 from app.api.exports import router as exports_router
 from app.api.connectors import router as connectors_router
+from app.api.vitals import router as vitals_router
 from app.api.opd import router as opd_router
+from app.api.soap import router as soap_router
 
 from app.config import settings
 from app.database import init_db
@@ -153,7 +155,9 @@ app.include_router(whatsapp_router)
 app.include_router(organizations_router)
 app.include_router(exports_router)
 app.include_router(connectors_router)
+app.include_router(vitals_router)
 app.include_router(opd_router)
+app.include_router(soap_router)
 
 
 # ═══════════════════════════════════════════

@@ -399,4 +399,326 @@ export const connectorApi = {
   },
 };
 
+// ---- Vitals API ----
+export const vitalsApi = {
+  create: async (vital: any): Promise<any> => {
+    const res = await fetchWithAuth('/api/v1/vitals', {
+      method: 'POST',
+      body: JSON.stringify(vital),
+    });
+    return res.json();
+  },
+
+  getByPatient: async (patientId: string, params?: {
+    vital_type?: string;
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.vital_type) query.set('vital_type', params.vital_type);
+    if (params?.start_date) query.set('start_date', params.start_date);
+    if (params?.end_date) query.set('end_date', params.end_date);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const res = await fetchWithAuth(`/api/v1/vitals/patient/${patientId}?${query.toString()}`);
+    return res.json();
+  },
+
+  getLatest: async (patientId: string): Promise<any[]> => {
+    const res = await fetchWithAuth(`/api/v1/vitals/patient/${patientId}/latest`);
+    return res.json();
+  },
+
+  getById: async (vitalId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/vitals/${vitalId}`);
+    return res.json();
+  },
+
+  update: async (vitalId: string, data: any): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/vitals/${vitalId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  delete: async (vitalId: string): Promise<void> => {
+    await fetchWithAuth(`/api/v1/vitals/${vitalId}`, { method: 'DELETE' });
+  },
+
+  getTypes: async (): Promise<any[]> => {
+    const res = await fetchWithAuth('/api/v1/vitals/types/list');
+    return res.json();
+  },
+};
+
+// ---- OPD API ----
+export const opdApi = {
+  register: async (data: {
+    first_name: string;
+    last_name: string;
+    age?: number;
+    gender?: string;
+    phone?: string;
+    address?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    chief_complaint?: string;
+    existing_patient_id?: string;
+  }): Promise<{
+    registration_id: string;
+    uhid: string;
+    token_number: number;
+    estimated_wait_minutes: number;
+    patient_name: string;
+    registration_date: string;
+  }> => {
+    const res = await fetchWithAuth('/api/v1/opd/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  search: async (params: {
+    phone?: string;
+    uhid?: string;
+    first_name?: string;
+    last_name?: string;
+  }): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params.phone) query.set('phone', params.phone);
+    if (params.uhid) query.set('uhid', params.uhid);
+    if (params.first_name) query.set('first_name', params.first_name);
+    if (params.last_name) query.set('last_name', params.last_name);
+    const res = await fetchWithAuth(`/api/v1/opd/search?${query.toString()}`);
+    return res.json();
+  },
+
+  getQueue: async (status?: string): Promise<{
+    tokens: any[];
+    total_waiting: number;
+    total_in_progress: number;
+    current_token?: number;
+    next_token?: number;
+  }> => {
+    const query = status ? `?status=${status}` : '';
+    const res = await fetchWithAuth(`/api/v1/opd/queue${query}`);
+    return res.json();
+  },
+
+  queueAction: async (tokenId: string, action: string, room?: string): Promise<any> => {
+    const query = new URLSearchParams({ token_id: tokenId, action: action });
+    if (room) query.set('room', room);
+    const res = await fetchWithAuth(`/api/v1/opd/queue/action?${query.toString()}`, {
+      method: 'POST',
+    });
+    return res.json();
+  },
+
+  getTokenDetails: async (tokenId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/opd/queue/${tokenId}`);
+    return res.json();
+  },
+
+  getRegistration: async (registrationId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/opd/registration/${registrationId}`);
+    return res.json();
+  },
+};
+
+// ---- SOAP API ----
+export interface ICD10Code {
+  code: string;
+  description: string;
+  category?: string;
+  subcategory?: string;
+  is_billable: boolean;
+}
+
+export interface Medication {
+  name: string;
+  dose?: string;
+  frequency?: string;
+  duration?: string;
+  route?: string;
+  instructions?: string;
+}
+
+export interface Investigation {
+  name: string;
+  type?: string;
+  priority?: string;
+  notes?: string;
+}
+
+export interface Referral {
+  specialty: string;
+  reason: string;
+  urgency?: string;
+  provider?: string;
+}
+
+export interface ICD10CodeEntry {
+  code: string;
+  description: string;
+  primary?: boolean;
+}
+
+export interface SOAPNoteCreate {
+  patient_id: string;
+  encounter_id: string;
+  token_id: string;
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+  chief_complaint?: string;
+  icd10_codes: ICD10CodeEntry[];
+  medications: Medication[];
+  investigations: Investigation[];
+  referrals: Referral[];
+  follow_up_date?: string;
+  follow_up_notes?: string;
+  status?: string;
+  word_count?: number;
+  time_spent_seconds?: number;
+}
+
+export interface SOAPNoteUpdate {
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+  chief_complaint?: string;
+  icd10_codes?: ICD10CodeEntry[];
+  medications?: Medication[];
+  investigations?: Investigation[];
+  referrals?: Referral[];
+  follow_up_date?: string;
+  follow_up_notes?: string;
+  status?: string;
+  word_count?: number;
+  time_spent_seconds?: number;
+}
+
+export interface VitalSign {
+  type: string;
+  value: string;
+  unit: string;
+  recorded_at: string;
+  is_abnormal: boolean;
+  reference_range_low?: string;
+  reference_range_high?: string;
+}
+
+export interface SOAPNote {
+  id: string;
+  patient_id: string;
+  encounter_id: string;
+  token_id: string;
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  chief_complaint: string;
+  icd10_codes: ICD10CodeEntry[];
+  medications: Medication[];
+  investigations: Investigation[];
+  referrals: Referral[];
+  follow_up_date: string | null;
+  follow_up_notes: string | null;
+  status: string;
+  version: number;
+  word_count: number;
+  time_spent_seconds: number;
+  last_autosaved_at: string | null;
+  pdf_generated_at: string | null;
+  created_by: string | null;
+  finalized_by: string | null;
+  finalized_at: string | null;
+  created_at: string;
+  updated_at: string;
+  patient_name: string;
+  patient_age: number | null;
+  patient_gender: string | null;
+  token_number: number | null;
+  uhid: string | null;
+  latest_vitals: VitalSign[];
+}
+
+export interface SOAPVersion {
+  id: string;
+  soap_note_id: string;
+  version_number: number;
+  subjective: string | null;
+  objective: string | null;
+  assessment: string | null;
+  plan: string | null;
+  icd10_codes: ICD10CodeEntry[];
+  medications: Medication[];
+  investigations: Investigation[];
+  referrals: Referral[];
+  follow_up_date: string | null;
+  follow_up_notes: string | null;
+  word_count: number;
+  time_spent_seconds: number;
+  is_autosave: boolean;
+  changed_by: string | null;
+  change_summary: string | null;
+  created_at: string;
+}
+
+export interface ICD10SearchResponse {
+  codes: ICD10Code[];
+  total: number;
+}
+
+export const soapApi = {
+  createOrUpdate: async (patientId: string, data: SOAPNoteCreate | SOAPNoteUpdate): Promise<SOAPNote> => {
+    const res = await fetchWithAuth('/api/v1/clinical/soap', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getByEncounter: async (patientId: string): Promise<SOAPNote> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/soap/${patientId}`);
+    return res.json();
+  },
+
+  getVersions: async (patientId: string): Promise<SOAPVersion[]> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/soap/${patientId}/versions`);
+    return res.json();
+  },
+
+  autosave: async (patientId: string, data: SOAPNoteUpdate): Promise<SOAPNote> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/soap/${patientId}/autosave`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  finalize: async (patientId: string): Promise<SOAPNote> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/soap/${patientId}/finalize`, {
+      method: 'POST',
+    });
+    return res.json();
+  },
+
+  exportPDF: async (patientId: string): Promise<string> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/soap/${patientId}/pdf`);
+    return res.text();
+  },
+
+  searchICD10: async (query: string): Promise<ICD10SearchResponse> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/icd10/search?q=${encodeURIComponent(query)}`);
+    return res.json();
+  },
+};
+
 export { API_BASE, ApiError, fetchWithAuth };

@@ -16,12 +16,18 @@ import {
   Bell,
   Upload,
   Download,
+  ClipboardList,
+  Calendar,
+  Monitor,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/patients', icon: Users, label: 'Patients' },
+  { to: '/opd/register', icon: ClipboardList, label: 'OPD Register' },
+  { to: '/opd/queue', icon: Calendar, label: 'Doctor Queue' },
+  { to: '/opd/display', icon: Monitor, label: 'Waiting Display' },
   { to: '/fhir', icon: Activity, label: 'FHIR Explorer' },
   { to: '/convert', icon: ArrowLeftRight, label: 'Conversion' },
   { to: '/consent', icon: ShieldCheck, label: 'Consent Manager' },

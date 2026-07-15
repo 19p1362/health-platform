@@ -76,20 +76,28 @@ class RoleHierarchy(IntEnum):
 # ═══════════════════════════════════════════════════
 # Actions:
 #   patient.read, patient.write, patient.export, patient.delete,
-#   consent.manage, audit.view, user.manage, system.admin
+#   vital_sign.read, vital_sign.write,
+#   consent.manage, audit.view, user.manage, system.admin,
+#   clinical.soap.read, clinical.soap.write, clinical.icd10.search
 
 _PERMISSION_MATRIX: dict[str, set[str]] = {
-    "READ_ONLY": {"patient.read"},
-    "COORDINATOR": {"patient.read", "patient.write", "consent.manage", "audit.view"},
-    "NURSE": {"patient.read", "patient.write", "consent.manage", "audit.view"},
-    "DOCTOR": {"patient.read", "patient.write", "patient.export", "consent.manage", "audit.view"},
+    "READ_ONLY": {"patient.read", "vital_sign.read", "clinical.icd10.search"},
+    "COORDINATOR": {"patient.read", "patient.write", "vital_sign.read", "vital_sign.write", "consent.manage", "audit.view", "opd.register", "opd.queue.read", "clinical.icd10.search"},
+    "NURSE": {"patient.read", "patient.write", "vital_sign.read", "vital_sign.write", "consent.manage", "audit.view", "opd.register", "opd.queue.read", "opd.queue.write", "clinical.icd10.search"},
+    "DOCTOR": {"patient.read", "patient.write", "patient.export", "vital_sign.read", "vital_sign.write", "consent.manage", "audit.view", "opd.register", "opd.queue.read", "opd.queue.write", "clinical.soap.read", "clinical.soap.write", "clinical.icd10.search"},
     "ORG_ADMIN": {
         "patient.read", "patient.write", "patient.export", "patient.delete",
+        "vital_sign.read", "vital_sign.write",
         "consent.manage", "audit.view", "user.manage", "system.admin",
+        "opd.register", "opd.queue.read", "opd.queue.write", "opd.register.read",
+        "clinical.soap.read", "clinical.soap.write", "clinical.icd10.search",
     },
     "SUPER_ADMIN": {
         "patient.read", "patient.write", "patient.export", "patient.delete",
+        "vital_sign.read", "vital_sign.write",
         "consent.manage", "audit.view", "user.manage", "system.admin",
+        "opd.register", "opd.queue.read", "opd.queue.write", "opd.register.read",
+        "clinical.soap.read", "clinical.soap.write", "clinical.icd10.search",
     },
 }
 

@@ -14,7 +14,7 @@ from sqlalchemy import (
     Column, String, Text, Integer, Boolean, DateTime, Date,
     Enum, ForeignKey, JSON, UniqueConstraint, Index
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from app.database import Base
 
@@ -60,6 +60,20 @@ class RecordType(str, PyEnum):
     ALLERGY_INTOLERANCE = "ALLERGY_INTOLERANCE"
     IMMUNIZATION = "IMMUNIZATION"
     DOCUMENT_REFERENCE = "DOCUMENT_REFERENCE"
+
+
+class VitalSignType(str, PyEnum):
+    """Standard vital sign types with LOINC codes for FHIR mapping."""
+    SYSTOLIC_BP = "SYSTOLIC_BP"           # 8480-6
+    DIASTOLIC_BP = "DIASTOLIC_BP"         # 8462-4
+    HEART_RATE = "HEART_RATE"             # 8867-4
+    RESPIRATORY_RATE = "RESPIRATORY_RATE" # 9279-1
+    TEMPERATURE = "TEMPERATURE"           # 8310-5
+    SPO2 = "SPO2"                         # 2708-6
+    RBS = "RBS"                           # 14769-7 (Random Blood Sugar)
+    WEIGHT = "WEIGHT"                     # 29463-7
+    HEIGHT = "HEIGHT"                     # 8302-2
+    BMI = "BMI"                           # 39156-5
 
 class AuditAction(str, PyEnum):
     PATIENT_ACCESSED = "PATIENT_ACCESSED"
@@ -219,6 +233,357 @@ class Patient(Base):
     consents = relationship("ConsentRecord", back_populates="patient", cascade="all, delete-orphan")
     breach_notifications = relationship("BreachNotification", back_populates="patient")
     communications = relationship("CommunicationLog", back_populates="patient")
+    vital_signs = relationship("VitalSign", back_populates="patient", cascade="all, delete-orphan")
+    opd_registrations = relationship("OPDRegistration", back_populates="patient", cascade="all, delete-orphan")
+    soap_notes = relationship("SOAPNote", back_populates="patient", cascade="all, delete-orphan")
+
+
+class VitalSign(Base):
+    """Vital Signs — structured observation entries for FHIR R4 Observation mapping."""
+    __tablename__ = "vital_signs"
+    __table_args__ = (
+        Index("ix_vitals_patient_type", "patient_id", "vital_type"),
+        Index("ix_vitals_recorded", "recorded_at"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    patient_id = Column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    vital_type = Column(Enum(VitalSignType), nullable=False)
+    value = Column(Text, nullable=False)  # Stored as string for flexibility (e.g., "120/80" for BP)
+    value_numeric = Column(Text, nullable=True)  # Numeric value for charting/queries
+    unit = Column(String(32), nullable=True)
+    recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    recorded_by = Column(String(36), nullable=True)  # User ID
+    device_name = Column(String(128), nullable=True)
+    device_serial = Column(String(128), nullable=True)
+    method = Column(String(64), nullable=True)  # Manual, Automated, Calculated
+    position = Column(String(32), nullable=True)  # sitting, standing, supine
+    notes = Column(Text, nullable=True)
+    is_abnormal = Column(Boolean, default=False)
+    reference_range_low = Column(Text, nullable=True)
+    reference_range_high = Column(Text, nullable=True)
+    encounter_id = Column(String(36), nullable=True)  # Link to encounter if applicable
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    patient = relationship("Patient", back_populates="vital_signs")
+
+    # FHIR Observation mapping helpers
+    LOINC_CODES = {
+        VitalSignType.SYSTOLIC_BP: "8480-6",
+        VitalSignType.DIASTOLIC_BP: "8462-4",
+        VitalSignType.HEART_RATE: "8867-4",
+        VitalSignType.RESPIRATORY_RATE: "9279-1",
+        VitalSignType.TEMPERATURE: "8310-5",
+        VitalSignType.SPO2: "2708-6",
+        VitalSignType.RBS: "14769-7",
+        VitalSignType.WEIGHT: "29463-7",
+        VitalSignType.HEIGHT: "8302-2",
+        VitalSignType.BMI: "39156-5",
+    }
+
+    UNITS = {
+        VitalSignType.SYSTOLIC_BP: "mmHg",
+        VitalSignType.DIASTOLIC_BP: "mmHg",
+        VitalSignType.HEART_RATE: "/min",
+        VitalSignType.RESPIRATORY_RATE: "/min",
+        VitalSignType.TEMPERATURE: "°C",
+        VitalSignType.SPO2: "%",
+        VitalSignType.RBS: "mg/dL",
+        VitalSignType.WEIGHT: "kg",
+        VitalSignType.HEIGHT: "cm",
+        VitalSignType.BMI: "kg/m2",
+    }
+
+    @classmethod
+    def get_loinc_code(cls, vital_type: VitalSignType) -> str:
+        return cls.LOINC_CODES.get(vital_type, "")
+
+    @classmethod
+    def get_unit(cls, vital_type: VitalSignType) -> str:
+        return cls.UNITS.get(vital_type, "")
+
+    def to_fhir_observation(self) -> dict:
+        """Convert to FHIR R4 Observation resource."""
+        loinc = self.get_loinc_code(self.vital_type)
+        unit = self.get_unit(self.vital_type)
+        try:
+            value_num = float(self.value_numeric) if self.value_numeric else float(self.value.split("/")[0] if "/" in self.value else self.value)
+        except (ValueError, TypeError):
+            value_num = None
+
+        return {
+            "resourceType": "Observation",
+            "id": self.id,
+            "status": "final",
+            "category": [{
+                "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                    "code": "vital-signs",
+                    "display": "Vital Signs"
+                }]
+            }],
+            "code": {
+                "coding": [{
+                    "system": "http://loinc.org",
+                    "code": loinc,
+                    "display": self.vital_type.value.replace("_", " ").title()
+                }],
+                "text": self.vital_type.value.replace("_", " ").title()
+            },
+            "subject": {"reference": f"Patient/{self.patient_id}"},
+            "effectiveDateTime": self.recorded_at.isoformat() if self.recorded_at else None,
+            "valueQuantity": {
+                "value": value_num,
+                "unit": unit,
+                "system": "http://unitsofmeasure.org",
+                "code": unit.replace("°C", "Cel").replace("%", "percent").replace("/min", "/min")
+            } if value_num is not None else None,
+            "valueString": self.value if value_num is None else None,
+            "interpretation": [{
+                "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                    "code": "A" if self.is_abnormal else "N",
+                    "display": "Abnormal" if self.is_abnormal else "Normal"
+                }]
+            }] if self.is_abnormal or self.reference_range_low or self.reference_range_high else None,
+            "referenceRange": [{
+                "low": {"value": float(self.reference_range_low), "unit": unit, "system": "http://unitsofmeasure.org"} if self.reference_range_low else None,
+                "high": {"value": float(self.reference_range_high), "unit": unit, "system": "http://unitsofmeasure.org"} if self.reference_range_high else None,
+            }] if self.reference_range_low or self.reference_range_high else None,
+            "device": {"display": self.device_name} if self.device_name else None,
+            "note": [{"text": self.notes}] if self.notes else None,
+        }
+
+
+# ═══════════════════════════════════════════════════
+# OPD Registration & Token Queue
+# ═══════════════════════════════════════════════════
+
+class TokenStatus(str, PyEnum):
+    WAITING = "WAITING"
+    CALLED = "CALLED"
+    IN_PROGRESS = "IN_PROGRESS"
+    DONE = "DONE"
+    SKIPPED = "SKIPPED"
+    NO_SHOW = "NO_SHOW"
+
+
+class OPDRegistration(Base):
+    """OPD Registration with UHID generation and token assignment."""
+    __tablename__ = "opd_registrations"
+    __table_args__ = (
+        Index("ix_opd_uhid", "uhid", unique=True),
+        Index("ix_opd_tenant_date", "tenant_id", "registration_date"),
+        Index("ix_opd_patient", "patient_id"),
+        Index("ix_opd_phone", "phone"),
+        UniqueConstraint("tenant_id", "token_number", "registration_date", name="uq_tenant_token_date"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id = Column(String(36), ForeignKey("patients.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # UHID: UHID-YYYYMMDD-XXXX (unique per org per day)
+    uhid = Column(String(32), nullable=False, unique=True, index=True)
+
+    # Patient Demographics (denormalized for quick access at front desk)
+    first_name = Column(Text, nullable=False)
+    last_name = Column(Text, nullable=False)
+    age = Column(Integer, nullable=True)
+    gender = Column(Enum(Gender), default=Gender.UNKNOWN)
+    phone = Column(Text, nullable=True)
+    address = Column(Text, nullable=True)
+    emergency_contact_name = Column(Text, nullable=True)
+    emergency_contact_phone = Column(Text, nullable=True)
+
+    # Registration metadata
+    registration_date = Column(Date, default=datetime.utcnow, nullable=False, index=True)
+    token_number = Column(Integer, nullable=False)  # Sequential per day per org
+    estimated_wait_minutes = Column(Integer, default=0)
+
+    # Status tracking
+    status = Column(Enum(TokenStatus), default=TokenStatus.WAITING, nullable=False)
+    chief_complaint = Column(Text, nullable=True)
+
+    # Timestamps
+    registered_at = Column(DateTime, default=datetime.utcnow)
+    called_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Audit
+    registered_by = Column(String(36), nullable=True)  # User ID
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    patient = relationship("Patient", back_populates="opd_registrations")
+    tokens = relationship("TokenQueue", back_populates="registration", cascade="all, delete-orphan")
+
+
+class TokenQueue(Base):
+    """Token Queue for real-time doctor queue management."""
+    __tablename__ = "token_queue"
+    __table_args__ = (
+        Index("ix_token_queue_status", "status"),
+        Index("ix_token_queue_doctor", "doctor_id"),
+        Index("ix_token_queue_tenant_date", "tenant_id", "queue_date"),
+        Index("ix_token_queue_uhid", "uhid"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    registration_id = Column(String(36), ForeignKey("opd_registrations.id", ondelete="CASCADE"), nullable=False, index=True)
+    uhid = Column(String(32), nullable=False, index=True)
+
+    token_number = Column(Integer, nullable=False, index=True)
+    queue_date = Column(Date, default=datetime.utcnow, nullable=False, index=True)
+
+    status = Column(Enum(TokenStatus), default=TokenStatus.WAITING, nullable=False, index=True)
+    doctor_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    room = Column(String(32), nullable=True)
+
+    # Chief complaint for doctor's quick view
+    chief_complaint = Column(Text, nullable=True)
+
+    # Timestamps
+    called_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Audit
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    registration = relationship("OPDRegistration", back_populates="tokens")
+    doctor = relationship("User", foreign_keys=[doctor_id])
+
+
+# Update Patient model to add opd_registrations relationship
+# Add this to Patient class: opd_registrations = relationship("OPDRegistration", back_populates="patient", cascade="all, delete-orphan")
+
+
+# ═══════════════════════════════════════════════════
+# SOAP Clinical Notes
+# ═══════════════════════════════════════════════════
+
+
+class SOAPNote(Base):
+    """SOAP Clinical Note — Subjective, Objective, Assessment, Plan documentation."""
+
+    __tablename__ = "soap_notes"
+    __table_args__ = (
+        Index("ix_soap_patient", "patient_id"),
+        Index("ix_soap_encounter", "encounter_id"),
+        Index("ix_soap_token", "token_id"),
+        Index("ix_soap_created", "created_at"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id = Column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    encounter_id = Column(String(36), ForeignKey("opd_registrations.id", ondelete="CASCADE"), nullable=True, index=True)  # Links to OPDRegistration
+    token_id = Column(String(36), ForeignKey("token_queue.id", ondelete="CASCADE"), nullable=True, index=True)  # Links to TokenQueue
+
+    # SOAP Sections
+    subjective = Column(Text, nullable=True)      # Patient's complaints, history, symptoms
+    objective = Column(Text, nullable=True)       # Vitals, exam findings, observations
+    assessment = Column(Text, nullable=True)      # Clinical impression, diagnosis
+    plan = Column(Text, nullable=True)            # Treatment plan, medications, follow-up
+
+    # Structured Clinical Data (for FHIR/Interop)
+    chief_complaint = Column(Text, nullable=True)
+    icd10_codes = Column(JSON, default=list)      # List of ICD-10 codes with descriptions
+    snomed_codes = Column(JSON, default=list)     # List of SNOMED codes
+
+    # Structured Plan Components
+    medications = Column(JSON, default=list)      # Prescribed medications
+    investigations = Column(JSON, default=list)   # Ordered investigations
+    referrals = Column(JSON, default=list)        # Specialist referrals
+    follow_up_date = Column(Date, nullable=True)
+    follow_up_notes = Column(Text, nullable=True)
+
+    # Versioning
+    version = Column(Integer, default=1, nullable=False)
+    parent_version_id = Column(String(36), ForeignKey("soap_notes.id", ondelete="SET NULL"), nullable=True)
+    is_latest = Column(Boolean, default=True, nullable=False)
+
+    # Status
+    status = Column(String(32), default="DRAFT", nullable=False)  # DRAFT, FINAL, AMENDED
+    completed_at = Column(DateTime, nullable=True)
+
+    # Audit
+    created_by = Column(String(36), nullable=True)  # User ID
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    patient = relationship("Patient", back_populates="soap_notes")
+    versions = relationship("SOAPNote", backref=backref("parent_version", remote_side=[id]))
+
+
+class PatientSOAPVersion(Base):
+    """Audit trail for SOAP note versions — every keystroke logged for DPDP compliance."""
+
+    __tablename__ = "soap_note_versions"
+    __table_args__ = (
+        Index("ix_soap_version_note", "soap_note_id"),
+        Index("ix_soap_version_created", "created_at"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    soap_note_id = Column(String(36), ForeignKey("soap_notes.id", ondelete="CASCADE"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+
+    # Full snapshot of the note at this version
+    subjective = Column(Text, nullable=True)
+    objective = Column(Text, nullable=True)
+    assessment = Column(Text, nullable=True)
+    plan = Column(Text, nullable=True)
+    chief_complaint = Column(Text, nullable=True)
+    icd10_codes = Column(JSON, default=list)
+    snomed_codes = Column(JSON, default=list)
+    medications = Column(JSON, default=list)
+    investigations = Column(JSON, default=list)
+    referrals = Column(JSON, default=list)
+    follow_up_date = Column(Date, nullable=True)
+    follow_up_notes = Column(Text, nullable=True)
+
+    # Change metadata
+    changed_by = Column(String(36), nullable=True)
+    change_summary = Column(Text, nullable=True)  # e.g., "Auto-save", "Manual save", "Assessment updated"
+    word_count = Column(Integer, default=0)
+    time_spent_seconds = Column(Integer, default=0)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ICD10Code(Base):
+    """ICD-10-CM codes for diagnosis coding — cached for offline search."""
+
+    __tablename__ = "icd10_codes"
+    __table_args__ = (
+        Index("ix_icd10_code", "code"),
+        Index("ix_icd10_description", "description"),
+        Index("ix_icd10_category", "category"),
+        Index("ix_icd10_tenant", "tenant_id"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = Column(String(16), nullable=False, index=True)  # e.g., E11.9, I10
+    description = Column(Text, nullable=False)
+    category = Column(String(64), nullable=True)  # e.g., "Endocrine", "Circulatory"
+    subcategory = Column(String(64), nullable=True)
+    is_billable = Column(Boolean, default=True)
+    valid_from = Column(Date, nullable=True)
+    valid_to = Column(Date, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# Add to Patient model: soap_notes = relationship("SOAPNote", back_populates="patient", cascade="all, delete-orphan")
 
 
 class PatientAccountLink(Base):

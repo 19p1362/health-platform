@@ -24,6 +24,7 @@ import OPDRegister from './pages/OPDRegister';
 import DoctorQueue from './pages/DoctorQueue';
 import WaitingAreaDisplay from './pages/WaitingAreaDisplay';
 import SOAPEditor from './pages/SOAPEditor';
+import PrescriptionWriter from './pages/PrescriptionWriter';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +68,7 @@ const App: React.FC = () => {
               <Route path="/opd/queue" element={<DoctorQueue />} />
               <Route path="/opd/display" element={<WaitingAreaDisplay />} />
               <Route path="/patients/:patientId/soap" element={<SOAPEditor />} />
+              <Route path="/patients/:patientId/prescribe" element={<PrescriptionWriter />} />
             </Route>
           </Routes>
         </AuthProvider>

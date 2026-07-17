@@ -26,6 +26,7 @@ import {
   Calendar,
   Type,
   Zap,
+  ExternalLink,
 } from 'lucide-react';
 import { soapApi } from '../services/api';
 import { vitalsApi } from '../services/api';
@@ -771,9 +772,20 @@ const SOAPEditor: React.FC = () => {
             <div className="plan-section">
               <div className="section-header">
                 <h4><Pill size={18} /> Medications</h4>
-                <button className="btn btn-sm btn-primary" onClick={addMedication}>
-                  <Plus size={14} /> Add
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn btn-sm btn-primary" onClick={addMedication}>
+                    <Plus size={14} /> Add
+                  </button>
+                  {tokenId && (
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => navigate(`/patients/${patientId}/prescribe?encounter=${tokenId}`)}
+                      title="Open structured Prescription Writer with formulary & safety checks"
+                    >
+                      <ExternalLink size={14} /> Open Prescription Writer
+                    </button>
+                  )}
+                </div>
               </div>
               {(formData.medications || []).length === 0 ? (
                 <p className="text-muted">No medications added yet.</p>

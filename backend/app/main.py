@@ -26,6 +26,7 @@ from app.api.connectors import router as connectors_router
 from app.api.vitals import router as vitals_router
 from app.api.opd import router as opd_router
 from app.api.soap import router as soap_router
+from app.api.prescriptions import router as prescriptions_router
 
 from app.config import settings
 from app.database import init_db
@@ -158,6 +159,8 @@ app.include_router(connectors_router)
 app.include_router(vitals_router)
 app.include_router(opd_router)
 app.include_router(soap_router)
+app.include_router(prescriptions_router)
+app.include_router(prescriptions_router)
 
 
 # ═══════════════════════════════════════════

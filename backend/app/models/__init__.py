@@ -583,6 +583,425 @@ class ICD10Code(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+# ═══════════════════════════════════════════════════
+# Drug Formulary & Prescription (Days 8-10)
+# ═══════════════════════════════════════════════════
+
+
+class DrugForm(str, PyEnum):
+    TABLET = "TABLET"
+    CAPSULE = "CAPSULE"
+    SYRUP = "SYRUP"
+    SUSPENSION = "SUSPENSION"
+    INJECTION = "INJECTION"
+    INFUSION = "INFUSION"
+    CREAM = "CREAM"
+    OINTMENT = "OINTMENT"
+    GEL = "GEL"
+    DROPS = "DROPS"
+    INHALER = "INHALER"
+    NEBULIZER = "NEBULIZER"
+    PATCH = "PATCH"
+    SUPPOSITORY = "SUPPOSITORY"
+    LOZENGE = "LOZENGE"
+    SPRAY = "SPRAY"
+    POWDER = "POWDER"
+    SOLUTION = "SOLUTION"
+    OTHER = "OTHER"
+
+
+class DrugRoute(str, PyEnum):
+    PO = "PO"           # Per Oral
+    IV = "IV"           # Intravenous
+    IM = "IM"           # Intramuscular
+    SC = "SC"           # Subcutaneous
+    SL = "SL"           # Sublingual
+    TOPICAL = "TOPICAL"
+    INHALATION = "INHALATION"
+    PR = "PR"           # Per Rectum
+    PV = "PV"           # Per Vaginam
+    IT = "IT"           # Intrathecal
+    IA = "IA"           # Intra-arterial
+    ID = "ID"           # Intradermal
+    NASAL = "NASAL"
+    OPHTHALMIC = "OPHTHALMIC"
+    OTIC = "OTIC"
+    TRANSDERMAL = "TRANSDERMAL"
+    SUBLINGUAL = "SUBLINGUAL"
+    BUCCAL = "BUCCAL"
+    OTHER = "OTHER"
+
+
+class PrescriptionFrequency(str, PyEnum):
+    OD = "OD"           # Once daily
+    BD = "BD"           # Twice daily
+    TDS = "TDS"         # Three times daily
+    QID = "QID"         # Four times daily
+    SOS = "SOS"         # As needed
+    HS = "HS"           # At bedtime
+    Q6H = "Q6H"         # Every 6 hours
+    Q8H = "Q8H"         # Every 8 hours
+    Q12H = "Q12H"       # Every 12 hours
+    WEEKLY = "WEEKLY"
+    BIWEEKLY = "BIWEEKLY"
+    MONTHLY = "MONTHLY"
+    STAT = "STAT"       # Immediately
+    PRN = "PRN"         # As required
+    CUSTOM = "CUSTOM"   # Custom cron expression
+
+
+class PrescriptionStatus(str, PyEnum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    ON_HOLD = "ON_HOLD"
+    EXPIRED = "EXPIRED"
+
+
+class InteractionSeverity(str, PyEnum):
+    CONTRAINDICATED = "CONTRAINDICATED"  # Red - Do not combine
+    MAJOR = "MAJOR"                        # Red - Significant risk
+    MODERATE = "MODERATE"                  # Yellow - Monitor closely
+    MINOR = "MINOR"                        # Blue - Minimal risk
+    UNKNOWN = "UNKNOWN"                    # Gray - Not classified
+
+
+class PregnancyCategory(str, PyEnum):
+    A = "A"        # Safe in pregnancy
+    B = "B"        # No evidence of risk
+    C = "C"        # Risk cannot be ruled out
+    D = "D"        # Positive evidence of risk
+    X = "X"        # Contraindicated in pregnancy
+    N = "N"        # Not classified
+
+
+class DrugClass(str, PyEnum):
+    """WHO ATC classification first level"""
+    ALIMENTARY = "A"              # Alimentary tract and metabolism
+    BLOOD = "B"                   # Blood and blood forming organs
+    CARDIOVASCULAR = "C"          # Cardiovascular system
+    DERMATOLOGICAL = "D"          # Dermatologicals
+    GENITOURINARY = "G"           # Genito-urinary system and sex hormones
+    HORMONES = "H"                # Systemic hormonal preparations
+    ANTI_INFECTIVE = "J"          # Anti-infectives for systemic use
+    ANTINEOPLASTIC = "L"          # Antineoplastic and immunomodulating agents
+    MUSCULOSKELETAL = "M"         # Musculoskeletal system
+    NERVOUS = "N"                 # Nervous system
+    ANTIPARASITIC = "P"           # Antiparasitic products
+    RESPIRATORY = "R"             # Respiratory system
+    SENSORY = "S"                 # Sensory organs
+    VARIOUS = "V"                 # Various
+    UNKNOWN = "Z"                 # Unclassified
+
+
+class Drug(Base):
+    """Drug master data — generic drug information shared across organizations."""
+
+    __tablename__ = "drugs"
+    __table_args__ = (
+        Index("ix_drug_generic", "generic_name"),
+        Index("ix_drug_name", "name"),
+        Index("ix_drug_category", "category"),
+        Index("ix_drug_atc_code", "atc_code"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    # Generic/brand info
+    name = Column(String(255), nullable=False)           # Brand name
+    generic_name = Column(String(255), nullable=False, index=True)
+    strength = Column(String(64), nullable=True)         # e.g., "500mg", "10mg/mL"
+    form = Column(Enum(DrugForm), nullable=False)
+    route = Column(Enum(DrugRoute), nullable=False)
+    manufacturer = Column(String(255), nullable=True)
+
+    # Classification
+    category = Column(String(128), nullable=True, index=True)  # e.g., "Antibiotic", "Antihypertensive"
+    drug_class = Column(Enum(DrugClass), default=DrugClass.UNKNOWN, index=True)
+    atc_code = Column(String(16), nullable=True, index=True)   # WHO ATC code
+    schedule = Column(String(16), nullable=True)               # Drug schedule (H, H1, X, etc.)
+
+    # Pricing & availability
+    price = Column(Text, nullable=True)               # Price per unit (store as string for precision)
+    currency = Column(String(3), default="INR")
+    is_essential = Column(Boolean, default=False)     # WHO Essential Medicines List
+
+    # Clinical info
+    indications = Column(JSON, default=list)          # List of ICD-10/SNOMED codes for indications
+    contraindications = Column(JSON, default=list)
+    side_effects = Column(JSON, default=list)
+    pregnancy_category = Column(Enum(PregnancyCategory), default=PregnancyCategory.N)
+    lactation_category = Column(String(16), nullable=True)  # L1-L5
+
+    # Dosing guidelines (structured JSON)
+    dosing_adult = Column(JSON, default=dict)
+    dosing_pediatric = Column(JSON, default=dict)
+    dosing_geriatric = Column(JSON, default=dict)
+    dosing_renal_impairment = Column(JSON, default=dict)
+    dosing_hepatic_impairment = Column(JSON, default=dict)
+
+    # Interactions (drug-class level)
+    interacts_with_classes = Column(JSON, default=list)  # List of DrugClass values
+
+    # Audit
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # Relationships
+    formulary_entries = relationship("FormularyEntry", back_populates="drug", cascade="all, delete-orphan")
+    prescription_lines = relationship("PrescriptionLine", back_populates="drug")
+
+
+class FormularyEntry(Base):
+    """Organization-specific formulary — hospital's approved drug list with pricing."""
+
+    __tablename__ = "formulary_entries"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "drug_id", name="uq_tenant_drug"),
+        Index("ix_formulary_tenant", "tenant_id"),
+        Index("ix_formulary_drug", "drug_id"),
+        Index("ix_formulary_category", "category"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    drug_id = Column(String(36), ForeignKey("drugs.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Organization-specific overrides
+    category = Column(String(128), nullable=True, index=True)  # Hospital's internal category
+    is_preferred = Column(Boolean, default=False)              # Preferred in formulary
+    is_restricted = Column(Boolean, default=False)             # Requires special approval
+    restriction_notes = Column(Text, nullable=True)
+
+    # Pricing (organization-specific)
+    price = Column(Text, nullable=True)
+    currency = Column(String(3), default="INR")
+    available = Column(Boolean, default=True)
+
+    # Audit
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    created_by = Column(String(36), nullable=True)
+
+    # Relationships
+    drug = relationship("Drug", back_populates="formulary_entries")
+
+
+class Prescription(Base):
+    """Prescription header — links to encounter/patient/doctor."""
+
+    __tablename__ = "prescriptions"
+    __table_args__ = (
+        Index("ix_presc_patient", "patient_id"),
+        Index("ix_presc_encounter", "encounter_id"),
+        Index("ix_presc_doctor", "doctor_id"),
+        Index("ix_presc_status", "status"),
+        Index("ix_presc_tenant", "tenant_id"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id = Column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    encounter_id = Column(String(36), ForeignKey("opd_registrations.id", ondelete="CASCADE"), nullable=True, index=True)
+    doctor_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Status & metadata
+    status = Column(Enum(PrescriptionStatus), default=PrescriptionStatus.DRAFT, nullable=False, index=True)
+    prescription_number = Column(String(64), nullable=True, unique=True)  # Human-readable Rx number
+
+    # Clinical context
+    diagnosis = Column(Text, nullable=True)           # Primary diagnosis
+    icd10_codes = Column(JSON, default=list)          # ICD-10 codes for this prescription
+    notes = Column(Text, nullable=True)               # General notes
+
+    # Dates
+    prescribed_at = Column(DateTime, default=utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+
+    # Audit
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # Relationships
+    lines = relationship("PrescriptionLine", back_populates="prescription", cascade="all, delete-orphan", order_by="PrescriptionLine.sequence")
+    patient = relationship("Patient")
+    encounter = relationship("OPDRegistration")
+    doctor = relationship("User", foreign_keys=[doctor_id])
+
+
+class PrescriptionLine(Base):
+    """Individual drug line in a prescription."""
+
+    __tablename__ = "prescription_lines"
+    __table_args__ = (
+        Index("ix_presc_line_presc", "prescription_id"),
+        Index("ix_presc_line_drug", "drug_id"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    prescription_id = Column(String(36), ForeignKey("prescriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    drug_id = Column(String(36), ForeignKey("drugs.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Drug details (denormalized for historical accuracy)
+    drug_name = Column(String(255), nullable=False)
+    generic_name = Column(String(255), nullable=True)
+    strength = Column(String(64), nullable=True)
+    form = Column(Enum(DrugForm), nullable=True)
+    route = Column(Enum(DrugRoute), nullable=False)
+
+    # Dosing
+    dose = Column(String(64), nullable=False)                 # e.g., "500mg", "10mL", "1 tablet"
+    frequency = Column(Enum(PrescriptionFrequency), nullable=False)
+    frequency_custom = Column(String(128), nullable=True)     # Cron expression if CUSTOM
+    duration = Column(String(64), nullable=False)             # e.g., "7 days", "30 days", "1 month"
+    duration_days = Column(Integer, nullable=True)            # Calculated for expiry
+
+    # Quantity
+    quantity = Column(String(64), nullable=False)             # Total quantity to dispense
+    quantity_unit = Column(String(32), default="units")       # tablets, mL, etc.
+    refills = Column(Integer, default=0)                      # Number of refills allowed
+
+    # Instructions
+    instructions = Column(Text, nullable=True)                # Special instructions
+    before_food = Column(Boolean, nullable=True)              # True=before, False=after, None=with food
+    at_bedtime = Column(Boolean, default=False)
+
+    # Sequence for display order
+    sequence = Column(Integer, default=0)
+
+    # Safety flags (populated by safety engine)
+    safety_status = Column(String(32), default="PENDING")     # SAFE, CAUTION, CONTRAINDICATED
+    interaction_warnings = Column(JSON, default=list)
+    allergy_warnings = Column(JSON, default=list)
+    duplicate_therapy_warnings = Column(JSON, default=list)
+    dose_warnings = Column(JSON, default=list)
+    pregnancy_warnings = Column(JSON, default=list)
+
+    # Audit
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # Relationships
+    prescription = relationship("Prescription", back_populates="lines")
+    drug = relationship("Drug", back_populates="prescription_lines")
+
+
+class DrugInteraction(Base):
+    """Drug-drug interaction knowledge base."""
+
+    __tablename__ = "drug_interactions"
+    __table_args__ = (
+        UniqueConstraint("drug_a_id", "drug_b_id", name="uq_drug_interaction"),
+        Index("ix_interaction_a", "drug_a_id"),
+        Index("ix_interaction_b", "drug_b_id"),
+        Index("ix_interaction_severity", "severity"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    drug_a_id = Column(String(36), ForeignKey("drugs.id", ondelete="CASCADE"), nullable=False, index=True)
+    drug_b_id = Column(String(36), ForeignKey("drugs.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    severity = Column(Enum(InteractionSeverity), nullable=False)
+    mechanism = Column(Text, nullable=True)           # Pharmacokinetic/pharmacodynamic mechanism
+    clinical_effect = Column(Text, nullable=False)    # What happens
+    management = Column(Text, nullable=True)          # How to manage
+    evidence_level = Column(String(32), nullable=True)  # A, B, C, D
+
+    # For class-level interactions
+    drug_a_class = Column(Enum(DrugClass), nullable=True)
+    drug_b_class = Column(Enum(DrugClass), nullable=True)
+    is_class_interaction = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # Relationships
+    drug_a = relationship("Drug", foreign_keys=[drug_a_id])
+    drug_b = relationship("Drug", foreign_keys=[drug_b_id])
+
+
+class AllergyIntolerance(Base):
+    """Patient allergy/intolerance records."""
+
+    __tablename__ = "allergy_intolerances"
+    __table_args__ = (
+        Index("ix_allergy_patient", "patient_id"),
+        Index("ix_allergy_substance", "substance"),
+        Index("ix_allergy_type", "reaction_type"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id = Column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # What the patient is allergic to
+    substance = Column(String(255), nullable=False, index=True)  # Drug name or class
+    substance_code = Column(String(64), nullable=True)           # RxNorm/SNOMED code
+    drug_class = Column(Enum(DrugClass), nullable=True)          # If class allergy
+
+    # Reaction details
+    reaction_type = Column(String(32), nullable=False)  # ALLERGY, INTOLERANCE, SIDE_EFFECT
+    manifestation = Column(Text, nullable=True)         # Rash, anaphylaxis, GI upset, etc.
+    severity = Column(String(16), nullable=True)        # MILD, MODERATE, SEVERE
+    onset_date = Column(Date, nullable=True)
+
+    # Verification
+    verified = Column(Boolean, default=False)
+    verified_by = Column(String(36), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+
+    # Status
+    status = Column(String(32), default="ACTIVE")       # ACTIVE, RESOLVED, ENTERED_IN_ERROR
+    notes = Column(Text, nullable=True)
+
+    # Audit
+    recorded_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # Relationships
+    patient = relationship("Patient")
+
+
+class DispensingTask(Base):
+    """Pharmacy dispensing queue task."""
+
+    __tablename__ = "dispensing_tasks"
+    __table_args__ = (
+        Index("ix_dispense_tenant", "tenant_id"),
+        Index("ix_dispense_status", "status"),
+        Index("ix_dispense_prescription", "prescription_id"),
+        Index("ix_dispense_pharmacist", "pharmacist_id"),
+    )
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    tenant_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    prescription_id = Column(String(36), ForeignKey("prescriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    pharmacist_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    status = Column(String(32), default="PENDING", nullable=False, index=True)  # PENDING, IN_PROGRESS, DISPENSED, PARTIAL, CANCELLED
+    priority = Column(String(16), default="ROUTINE")  # ROUTINE, URGENT, STAT
+
+    # Dispensing details
+    dispensed_lines = Column(JSON, default=list)  # List of {line_id, quantity_dispensed, batch, expiry}
+    notes = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Audit
+    created_by = Column(String(36), nullable=True)
+
+    # Relationships
+    prescription = relationship("Prescription")
+    pharmacist = relationship("User", foreign_keys=[pharmacist_id])
+
+
 # Add to Patient model: soap_notes = relationship("SOAPNote", back_populates="patient", cascade="all, delete-orphan")
 
 

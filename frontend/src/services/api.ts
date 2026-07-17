@@ -721,4 +721,349 @@ export const soapApi = {
   },
 };
 
+// ---- Prescription API ----
+export interface DrugSearchResponse {
+  id: string;
+  name: string;
+  generic_name: string;
+  strength: string | null;
+  form: string;
+  route: string;
+  manufacturer: string | null;
+  category: string | null;
+  drug_class: string;
+  atc_code: string | null;
+  price: string | null;
+  currency: string;
+  is_essential: boolean;
+  pregnancy_category: string;
+  dosing_adult: Record<string, any>;
+  dosing_pediatric: Record<string, any>;
+  dosing_geriatric: Record<string, any>;
+  formulary_price: string | null;
+  formulary_category: string | null;
+  is_preferred: boolean;
+  is_restricted: boolean;
+  restriction_notes: string | null;
+}
+
+export interface DrugSearchResult {
+  drugs: DrugSearchResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface PrescriptionLineCreate {
+  drug_id?: string;
+  drug_name: string;
+  generic_name?: string;
+  strength?: string;
+  form?: string;
+  route: string;
+  dose: string;
+  frequency: string;
+  frequency_custom?: string;
+  duration: string;
+  quantity: string;
+  quantity_unit?: string;
+  refills?: number;
+  instructions?: string;
+  before_food?: boolean;
+  at_bedtime?: boolean;
+  sequence?: number;
+}
+
+export interface PrescriptionLineResponse {
+  id: string;
+  drug_id: string | null;
+  drug_name: string;
+  generic_name: string | null;
+  strength: string | null;
+  form: string | null;
+  route: string;
+  dose: string;
+  frequency: string;
+  frequency_custom: string | null;
+  duration: string;
+  duration_days: number | null;
+  quantity: string;
+  quantity_unit: string;
+  refills: number;
+  instructions: string | null;
+  before_food: boolean | null;
+  at_bedtime: boolean;
+  sequence: number;
+  safety_status: string;
+  interaction_warnings: any[];
+  allergy_warnings: any[];
+  duplicate_therapy_warnings: any[];
+  dose_warnings: any[];
+  pregnancy_warnings: any[];
+}
+
+export interface PrescriptionCreate {
+  patient_id: string;
+  encounter_id?: string;
+  diagnosis?: string;
+  icd10_codes?: any[];
+  notes?: string;
+  lines: PrescriptionLineCreate[];
+}
+
+export interface PrescriptionUpdate {
+  status?: string;
+  diagnosis?: string;
+  icd10_codes?: any[];
+  notes?: string;
+  expires_at?: string;
+}
+
+export interface PrescriptionResponse {
+  id: string;
+  prescription_number: string | null;
+  patient_id: string;
+  encounter_id: string | null;
+  doctor_id: string | null;
+  status: string;
+  diagnosis: string | null;
+  icd10_codes: any[];
+  notes: string | null;
+  prescribed_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  expires_at: string | null;
+  lines: PrescriptionLineResponse[];
+  patient_name: string | null;
+  patient_age: number | null;
+  patient_gender: string | null;
+  uhid: string | null;
+  doctor_name: string | null;
+}
+
+export interface PrescriptionListResponse {
+  prescriptions: PrescriptionResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface SafetyCheckRequest {
+  patient_id: string;
+  lines: PrescriptionLineCreate[];
+  encounter_id?: string;
+}
+
+export interface SafetyCheckResponse {
+  overall_safety: string;
+  line_checks: any[];
+  summary: any;
+}
+
+export interface AllergyCreate {
+  substance: string;
+  substance_code?: string;
+  drug_class?: string;
+  reaction_type?: string;
+  manifestation?: string;
+  severity?: string;
+  onset_date?: string;
+  verified?: boolean;
+  notes?: string;
+}
+
+export interface AllergyResponse {
+  id: string;
+  substance: string;
+  substance_code: string | null;
+  drug_class: string | null;
+  reaction_type: string;
+  manifestation: string | null;
+  severity: string | null;
+  onset_date: string | null;
+  verified: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface DispensingTaskResponse {
+  id: string;
+  prescription_id: string;
+  pharmacist_id: string | null;
+  status: string;
+  priority: string;
+  dispensed_lines: any[];
+  notes: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  patient_name: string | null;
+  prescription_number: string | null;
+}
+
+export const prescriptionApi = {
+  // Drug Formulary
+  searchDrugs: async (params: {
+    q: string;
+    page?: number;
+    page_size?: number;
+    category?: string;
+    form?: string;
+  }): Promise<DrugSearchResult> => {
+    const query = new URLSearchParams();
+    query.set('q', params.q);
+    if (params.page) query.set('page', String(params.page));
+    if (params.page_size) query.set('page_size', String(params.page_size));
+    if (params.category) query.set('category', params.category);
+    if (params.form) query.set('form', params.form);
+    const res = await fetchWithAuth(`/api/v1/clinical/drugs/search?${query.toString()}`);
+    return res.json();
+  },
+
+  getDrugDetail: async (drugId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/drugs/${drugId}`);
+    return res.json();
+  },
+
+  getDrugInteractions: async (drugId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/drugs/${drugId}/interactions`);
+    return res.json();
+  },
+
+  getDrugDosing: async (drugId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/drugs/${drugId}/dosing`);
+    return res.json();
+  },
+
+  // Prescriptions
+  createPrescription: async (data: PrescriptionCreate): Promise<PrescriptionResponse> => {
+    const res = await fetchWithAuth('/api/v1/clinical/prescriptions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getPrescriptionsForEncounter: async (encounterId: string, params?: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+  }): Promise<PrescriptionListResponse> => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.page_size) query.set('page_size', String(params.page_size));
+    if (params?.status) query.set('status', params.status);
+    const res = await fetchWithAuth(`/api/v1/clinical/prescriptions/${encounterId}?${query.toString()}`);
+    return res.json();
+  },
+
+  addPrescriptionLine: async (prescriptionId: string, lineData: PrescriptionLineCreate): Promise<PrescriptionLineResponse> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/prescriptions/${prescriptionId}/lines`, {
+      method: 'POST',
+      body: JSON.stringify(lineData),
+    });
+    return res.json();
+  },
+
+  updatePrescription: async (prescriptionId: string, data: PrescriptionUpdate): Promise<PrescriptionResponse> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/prescriptions/${prescriptionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Safety Checks
+  checkSafety: async (data: SafetyCheckRequest): Promise<SafetyCheckResponse> => {
+    const res = await fetchWithAuth('/api/v1/clinical/prescriptions/safety-check', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Allergies
+  getPatientAllergies: async (patientId: string): Promise<AllergyResponse[]> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/patients/${patientId}/allergies`);
+    return res.json();
+  },
+
+  addPatientAllergy: async (patientId: string, data: AllergyCreate): Promise<AllergyResponse> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/patients/${patientId}/allergies`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Pharmacy Dispensing
+  getDispensingQueue: async (params?: { status?: string; priority?: string }): Promise<DispensingTaskResponse[]> => {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.priority) query.set('priority', params.priority);
+    const res = await fetchWithAuth(`/api/v1/clinical/pharmacy/queue?${query.toString()}`);
+    return res.json();
+  },
+
+  startDispensing: async (taskId: string): Promise<DispensingTaskResponse> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/pharmacy/queue/${taskId}/start`, {
+      method: 'POST',
+    });
+    return res.json();
+  },
+
+  dispensePrescription: async (taskId: string, dispensedData: { lines: any[]; notes?: string }): Promise<DispensingTaskResponse> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/pharmacy/queue/${taskId}/dispense`, {
+      method: 'POST',
+      body: JSON.stringify(dispensedData),
+    });
+    return res.json();
+  },
+
+  // Formulary Management
+  addToFormulary: async (data: {
+    drug_id: string;
+    category?: string;
+    is_preferred?: boolean;
+    is_restricted?: boolean;
+    restriction_notes?: string;
+    price?: string;
+    currency?: string;
+    available?: boolean;
+  }): Promise<any> => {
+    const res = await fetchWithAuth('/api/v1/clinical/formulary', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  listFormulary: async (params?: { category?: string; preferred_only?: boolean; available_only?: boolean }): Promise<DrugSearchResponse[]> => {
+    const query = new URLSearchParams();
+    if (params?.category) query.set('category', params.category);
+    if (params?.preferred_only) query.set('preferred_only', 'true');
+    if (params?.available_only) query.set('available_only', 'true');
+    const res = await fetchWithAuth(`/api/v1/clinical/formulary?${query.toString()}`);
+    return res.json();
+  },
+
+  updateFormularyEntry: async (formularyId: string, data: any): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/formulary/${formularyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  removeFromFormulary: async (formularyId: string): Promise<any> => {
+    const res = await fetchWithAuth(`/api/v1/clinical/formulary/${formularyId}`, {
+      method: 'DELETE',
+    });
+    return res.json();
+  },
+};
+
 export { API_BASE, ApiError, fetchWithAuth };

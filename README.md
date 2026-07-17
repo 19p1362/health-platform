@@ -48,6 +48,19 @@ A unified healthcare automation platform that solves the biggest problem in Indi
 │  │  Subscription tiers: Free / Starter / Professional / Ent.    │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    Clinical Workflow Layer                    │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │  │
+│  │  │ OPD Reg +   │  │ Vital Signs │  │ SOAP Notes  │           │  │
+│  │  │ Token Queue │  │  Entry      │  │  Editor     │           │  │
+│  │  │ (Day 3-4)   │  │ (Day 5-6)   │  │ (Day 7)     │           │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘           │  │
+│  │  ┌─────────────────────────────────────────────────────────┐  │  │
+│  │  │ Prescription Writer (Day 8-10)                          │  │  │
+│  │  │ Drug Formulary │ Structured Rx │ Safety Engine │ Pharmacy│  │
+│  │  └─────────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                    │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐   │
 │  │  ABDM/ABHA   │  │  DPDP 2025   │  │  WhatsApp Bridge       │   │
 │  │  Integration │  │  Compliance  │  │  (E2EE patient comms)  │   │
@@ -136,6 +149,16 @@ curl -X POST http://localhost:8080/api/v1/organizations/register \
 | `POST` | `/api/v1/auth/register` | Create user account |
 | `POST` | `/api/v1/auth/refresh` | Refresh token |
 
+### OPD Registration & Token Queue
+
+| Method | Path | What it does |
+|--------|------|-------------|
+| `POST` | `/api/v1/opd/register` | **Register patient for OPD visit — creates UHID + token** |
+| `GET` | `/api/v1/opd/search` | Search existing patients by phone/UHID/name |
+| `GET` | `/api/v1/opd/queue` | Get current token queue (today) |
+| `POST` | `/api/v1/opd/queue/action` | Doctor actions: CALL_NEXT, SKIP, RECALL, COMPLETE |
+| `GET` | `/api/v1/opd/ws/queue` | WebSocket for real-time queue updates |
+
 ### Patients & FHIR
 
 | Method | Path | What it does |
@@ -145,6 +168,48 @@ curl -X POST http://localhost:8080/api/v1/organizations/register \
 | `GET` | `/api/v1/patients/{id}` | Get patient details |
 | `GET` | `/api/v1/fhir/{resource_type}` | FHIR R4 resource search |
 | `GET` | `/api/v1/fhir/{resource_type}/{id}` | Read FHIR resource |
+
+### Vital Signs
+
+| Method | Path | What it does |
+|--------|------|-------------|
+| `POST` | `/api/v1/vitals` | Create vital sign observation |
+| `GET` | `/api/v1/vitals/patient/{patient_id}` | List vitals with filters |
+| `GET` | `/api/v1/vitals/patient/{patient_id}/latest` | Latest of each type (dashboard) |
+| `GET` | `/api/v1/vitals/{vital_id}` | Get single vital |
+| `PATCH` | `/api/v1/vitals/{vital_id}` | Update vital |
+| `DELETE` | `/api/v1/vitals/{vital_id}` | Delete vital |
+| `GET` | `/api/v1/vitals/types/list` | All vital types with units/reference ranges |
+
+### SOAP Clinical Notes
+
+| Method | Path | What it does |
+|--------|------|-------------|
+| `POST` | `/api/v1/clinical/soap` | Create SOAP note |
+| `GET` | `/api/v1/clinical/soap/{encounter_id}` | Get latest SOAP note |
+| `GET` | `/api/v1/clinical/soap/{encounter_id}/versions` | Version history |
+| `GET` | `/api/v1/clinical/soap/icd10/search` | ICD-10 code search |
+| `POST` | `/api/v1/clinical/soap/{encounter_id}/autosave` | Auto-save draft |
+| `POST` | `/api/v1/clinical/soap/{encounter_id}/finalize` | Finalize note |
+| `GET` | `/api/v1/clinical/soap/{encounter_id}/pdf` | Export PDF |
+
+### Prescription Writer (Drug Formulary + Structured Rx)
+
+| Method | Path | What it does |
+|--------|------|-------------|
+| `POST` | `/api/v1/clinical/prescriptions` | Create prescription from SOAP Plan |
+| `GET` | `/api/v1/clinical/prescriptions/{encounter_id}` | Get prescriptions for encounter |
+| `POST` | `/api/v1/clinical/prescriptions/{id}/lines` | Add drug line to prescription |
+| `PATCH` | `/api/v1/clinical/prescriptions/{id}` | Update prescription (status, lines) |
+| `POST` | `/api/v1/clinical/prescriptions/safety-check` | Run clinical safety checks |
+| `GET` | `/api/v1/clinical/drugs/search` | Search drug formulary |
+| `GET` | `/api/v1/clinical/drugs/{id}` | Drug details |
+| `GET` | `/api/v1/clinical/drugs/{id}/interactions` | Drug-drug interactions |
+| `GET` | `/api/v1/clinical/drugs/{id}/dosing` | Standard dosing guidelines |
+| `POST` | `/api/v1/clinical/formulary` | Add drug to organization formulary |
+| `GET` | `/api/v1/clinical/formulary` | List organization formulary |
+| `GET` | `/api/v1/clinical/pharmacy/queue` | Pharmacy dispensing queue |
+| `POST` | `/api/v1/clinical/pharmacy/queue/{id}/dispense` | Mark as dispensed |
 
 ### Document Ingestion
 
@@ -165,7 +230,7 @@ curl -X POST http://localhost:8080/api/v1/organizations/register \
 
 Interactive docs: **http://localhost:8080/docs**
 
-## 10 AI Care Agents
+## 10 AI Care Agents + Clinical Workflow Agents
 
 | # | Agent | Frequency | What it does |
 |---|-------|-----------|-------------|
@@ -179,6 +244,42 @@ Interactive docs: **http://localhost:8080/docs**
 | 8 | Pharmacy | 60 min | Refill alerts |
 | 9 | Lab | 30 min | Abnormal lab alerts |
 | 10 | Insurance | 24 h | Stalled claims flagging |
+
+**Clinical Workflow Agents (New):**
+
+| # | Agent | Trigger | What it does |
+|---|-------|---------|-------------|
+| 11 | OPD Registration | New patient | Auto-generates UHID, assigns token, estimates wait |
+| 12 | Vital Signs Monitor | New vitals entered | Auto-flags abnormal/critical values, alerts nurse |
+| 13 | SOAP Completion | Encounter end | Prompts doctor to complete SOAP, validates completeness |
+| 14 | Prescription Safety | Rx finalized | Runs DDI/allergy/duplicate/dose checks, alerts prescriber |
+| 15 | Pharmacy Dispense | Rx ACTIVE | Notifies pharmacy, tracks dispensing status |
+| 16 | Follow-up Scheduler | Rx finalized | Auto-creates follow-up token per plan date |
+| 17 | Lab Result Monitor | Lab entered | Flags abnormal results, notifies ordering doctor |
+| 18 | Discharge Planner | Admission | Tracks discharge readiness, alerts care team |
+
+## Clinical Workflow Modules (Day 3-10)
+
+| Day | Module | API | Frontend | Description |
+|-----|--------|-----|----------|-------------|
+| 3-4 | **OPD Registration + UHID + Token Queue** | `/api/v1/opd/*` | `/opd/register`, `/opd/queue`, `/opd/display` | Patient registration with UHID generation, real-time token queue with WebSocket updates, waiting area display |
+| 5-6 | **Vital Signs Entry** | `/api/v1/vitals/*` | `/patients/:id/vitals` | 10 vital types (BP, HR, SpO₂, Temp, RBS, etc.), auto-BMI, FHIR/LOINC mapping, abnormal detection |
+| 7 | **SOAP Clinical Notes Editor** | `/api/v1/clinical/soap/*` | `/patients/:id/soap` | Structured 4-tab SOAP, auto-save, ICD-10 search, PDF export, version history |
+| 8-10 | **Prescription Writer** | `/api/v1/clinical/prescriptions/*`, `/api/v1/clinical/drugs/*` | `/patients/:id/prescribe` | Drug formulary search, structured Rx, DDI/allergy/duplicate checks, safety badges, print Rx, pharmacy queue |
+
+**Complete Clinical Loop:**
+
+```
+Patient Arrives → OPD Register (UHID+Token) → Wait Display → Doctor Calls Token
+                                                      ↓
+                                               Enter Vitals → Write SOAP
+                                                      ↓
+                                               Finalize → Prescription Writer
+                                                      ↓
+                                               Finalize → Pharmacy Queue → Dispense
+                                                      ↓
+                                               Follow-up Token Auto-created → Loop
+```
 
 ## Security & DPDP 2025 Compliance
 
